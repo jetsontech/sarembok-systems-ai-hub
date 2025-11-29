@@ -20,7 +20,8 @@ import {
     History,
     Download,
     Volume2,
-    VolumeX
+    VolumeX,
+    Users
 } from 'lucide-react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -36,6 +37,7 @@ import ImageUpload, { type UploadedImage } from './ImageUpload';
 import CodeExecutionPanel from './CodeExecutionPanel';
 import DemoScenarios from './DemoScenarios';
 import GeminiStudio from './GeminiStudio';
+import MultiAgentPanel from './MultiAgentPanel';
 
 interface Message {
     id: string;
@@ -290,6 +292,7 @@ const Nexus365: React.FC = () => {
             case 'files':
             case 'files':
             case 'studio':
+            case 'multi-agent':
             case 'settings':
                 setActiveTab(command);
                 break;
@@ -460,6 +463,9 @@ const Nexus365: React.FC = () => {
                         <Command.Item onSelect={() => executeCommand('studio')}>
                             <Sparkles size={16} /> Gemini Studio
                         </Command.Item>
+                        <Command.Item onSelect={() => executeCommand('multi-agent')}>
+                            <Users size={16} /> Multi-Agent System
+                        </Command.Item>
                     </Command.Group>
                     <Command.Group heading="Actions">
                         <Command.Item onSelect={() => executeCommand('voice')}>
@@ -509,6 +515,11 @@ const Nexus365: React.FC = () => {
                         icon={<Sparkles size={24} />}
                         active={activeTab === 'studio'}
                         onClick={() => setActiveTab('studio')}
+                    />
+                    <NavItem
+                        icon={<Users size={24} />}
+                        active={activeTab === 'multi-agent'}
+                        onClick={() => setActiveTab('multi-agent')}
                     />
                     <div style={{ marginTop: 'auto' }}>
                         <NavItem
@@ -588,6 +599,14 @@ const Nexus365: React.FC = () => {
                                 animate={{ opacity: 1, y: 0 }}
                             >
                                 <GeminiStudio />
+                            </motion.div>
+                        ) : activeTab === 'multi-agent' ? (
+                            <motion.div
+                                className="nexus-panel flex-1 h-full"
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                            >
+                                <MultiAgentPanel />
                             </motion.div>
                         ) : activeTab === 'dashboard' && messages.length === 0 ? (
                             <>
