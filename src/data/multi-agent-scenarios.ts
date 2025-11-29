@@ -1,5 +1,5 @@
 import { multiAgentOrchestrator } from '../services/multi-agent-orchestrator';
-import { AgentTask } from '../types/Agent';
+import type { AgentTask } from '../types/Agent';
 
 export const runDemoScenario = (scenarioId: string) => {
     let task: AgentTask;
