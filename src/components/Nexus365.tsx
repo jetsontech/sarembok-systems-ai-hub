@@ -334,18 +334,6 @@ const Nexus365: React.FC = () => {
         }
     };
 
-    // Simulated "Live" Data
-    const emails = [
-        { id: 1, from: 'Sarah Connor', subject: 'Project Skynet Timeline', preview: 'We need to discuss the rollout phase...', sentiment: 'neutral', time: '10:42 AM' },
-        { id: 2, from: 'Tony Stark', subject: 'Arc Reactor Funding', preview: 'The board is asking for the new specs...', sentiment: 'urgent', time: '10:30 AM' },
-        { id: 3, from: 'Bruce Wayne', subject: 'Wayne Ent Merger', preview: 'Attached are the preliminary docs...', sentiment: 'positive', time: '09:15 AM' },
-    ];
-
-    const meetings = [
-        { id: 1, title: 'Q4 Strategy Sync', time: '11:00 AM - 12:00 PM', attendees: ['Alice', 'Bob', 'Charlie'], status: 'upcoming' },
-        { id: 2, title: 'Product Demo: Nexus', time: '02:00 PM - 03:00 PM', attendees: ['Investors'], status: 'pending' },
-    ];
-
     return (
         <div className="nexus-container">
             {/* 3D Holographic Layer */}
@@ -748,7 +736,7 @@ const Nexus365: React.FC = () => {
 
                     {/* Right Column: Schedule & Assistant */}
                     <div className="flex flex-col gap-6">
-                        {/* Meeting Briefing */}
+                        {/* AI Assistant Panel */}
                         <motion.div
                             className="nexus-panel"
                             initial={{ opacity: 0, x: 20 }}
@@ -757,40 +745,21 @@ const Nexus365: React.FC = () => {
                         >
                             <div className="panel-header">
                                 <div className="panel-title">
-                                    <Calendar size={20} />
-                                    <span>Next Engagement</span>
+                                    <Sparkles size={20} />
+                                    <span>AI Assistant</span>
                                 </div>
                             </div>
 
                             <div className="bg-gradient-to-br from-cyan-900/20 to-purple-900/20 p-4 rounded-xl border border-white/10 mb-4">
-                                <div className="flex justify-between mb-2">
-                                    <h3 className="text-lg font-bold text-white">Q4 Strategy Sync</h3>
-                                    <span className="text-cyan-400 font-mono">11:00 AM</span>
-                                </div>
-                                <div className="flex -space-x-2 mb-4">
-                                    {['A', 'B', 'C'].map((initial, i) => (
-                                        <div key={i} className="w-8 h-8 rounded-full bg-gray-800 border-2 border-black flex items-center justify-center text-xs">
-                                            {initial}
-                                        </div>
-                                    ))}
-                                </div>
+                                <p className="text-sm text-white/70 mb-4">
+                                    Your AI-powered assistant is ready to help with tasks, research, coding, and more.
+                                </p>
                                 <button
-                                    onClick={() => handleVoiceCommand('Generate a briefing for my next meeting')}
+                                    onClick={() => setActiveTab('dashboard')}
                                     className="w-full py-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 rounded text-cyan-300 text-sm transition-all"
                                 >
-                                    Generate Briefing Doc
+                                    Start Conversation
                                 </button>
-                            </div>
-
-                            <div className="flex flex-col gap-2">
-                                {meetings.slice(1).map(meeting => (
-                                    <div key={meeting.id} className="flex items-center justify-between p-3 border border-white/5 rounded bg-black/20">
-                                        <div>
-                                            <div className="font-medium text-sm">{meeting.title}</div>
-                                            <div className="text-xs text-gray-500">{meeting.time}</div>
-                                        </div>
-                                    </div>
-                                ))}
                             </div>
                         </motion.div>
 
