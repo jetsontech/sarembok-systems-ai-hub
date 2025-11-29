@@ -3,9 +3,6 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
     LayoutGrid,
-    Mail,
-    Calendar,
-    FileText,
     Mic,
     Search,
     Bell,
@@ -32,6 +29,7 @@ import HoloScanner from './HoloScanner';
 import { useNexusSound } from '../hooks/useNexusSound';
 import { useNexusBrain } from '../hooks/useNexusBrain';
 import './Nexus365.css';
+import './Nexus365-responsive.css';
 import ImageUpload, { type UploadedImage } from './ImageUpload';
 import CodeExecutionPanel from './CodeExecutionPanel';
 import DemoScenarios from './DemoScenarios';
@@ -287,13 +285,9 @@ const Nexus365: React.FC = () => {
         setCommandOpen(false);
         switch (command) {
             case 'dashboard':
-            case 'email':
-            case 'calendar':
-            case 'files':
-            case 'files':
+            case 'chat':
             case 'studio':
-            case 'multi-agent':
-            case 'settings':
+            case 'agents':
                 setActiveTab(command);
                 break;
             case 'voice':
@@ -434,25 +428,16 @@ const Nexus365: React.FC = () => {
                     <Command.Empty>No results found.</Command.Empty>
                     <Command.Group heading="Navigation">
                         <Command.Item onSelect={() => executeCommand('dashboard')}>
-                            <LayoutGrid size={16} /> Dashboard
+                            <LayoutGrid size={16} /> Home
                         </Command.Item>
-                        <Command.Item onSelect={() => executeCommand('email')}>
-                            <Mail size={16} /> Email
-                        </Command.Item>
-                        <Command.Item onSelect={() => executeCommand('calendar')}>
-                            <Calendar size={16} /> Calendar
-                        </Command.Item>
-                        <Command.Item onSelect={() => executeCommand('files')}>
-                            <FileText size={16} /> Files
-                        </Command.Item>
-                        <Command.Item onSelect={() => executeCommand('files')}>
-                            <FileText size={16} /> Files
+                        <Command.Item onSelect={() => executeCommand('chat')}>
+                            <MessageSquare size={16} /> AI Chat
                         </Command.Item>
                         <Command.Item onSelect={() => executeCommand('studio')}>
                             <Sparkles size={16} /> Gemini Studio
                         </Command.Item>
-                        <Command.Item onSelect={() => executeCommand('multi-agent')}>
-                            <Users size={16} /> Multi-Agent System
+                        <Command.Item onSelect={() => executeCommand('agents')}>
+                            <Users size={16} /> AI Agents
                         </Command.Item>
                     </Command.Group>
                     <Command.Group heading="Actions">
@@ -485,19 +470,9 @@ const Nexus365: React.FC = () => {
                         onClick={() => setActiveTab('dashboard')}
                     />
                     <NavItem
-                        icon={<Mail size={24} />}
-                        active={activeTab === 'email'}
-                        onClick={() => setActiveTab('email')}
-                    />
-                    <NavItem
-                        icon={<Calendar size={24} />}
-                        active={activeTab === 'calendar'}
-                        onClick={() => setActiveTab('calendar')}
-                    />
-                    <NavItem
-                        icon={<FileText size={24} />}
-                        active={activeTab === 'files'}
-                        onClick={() => setActiveTab('files')}
+                        icon={<MessageSquare size={24} />}
+                        active={activeTab === 'chat'}
+                        onClick={() => setActiveTab('chat')}
                     />
                     <NavItem
                         icon={<Sparkles size={24} />}
@@ -506,8 +481,8 @@ const Nexus365: React.FC = () => {
                     />
                     <NavItem
                         icon={<Users size={24} />}
-                        active={activeTab === 'multi-agent'}
-                        onClick={() => setActiveTab('multi-agent')}
+                        active={activeTab === 'agents'}
+                        onClick={() => setActiveTab('agents')}
                     />
                     <div style={{ marginTop: 'auto' }}>
                         <NavItem
@@ -588,7 +563,7 @@ const Nexus365: React.FC = () => {
                             >
                                 <GeminiStudio />
                             </motion.div>
-                        ) : activeTab === 'multi-agent' ? (
+                        ) : activeTab === 'agents' ? (
                             <motion.div
                                 className="nexus-panel flex-1 h-full"
                                 initial={{ opacity: 0, y: 20 }}
