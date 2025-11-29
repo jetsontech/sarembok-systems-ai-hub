@@ -1,0 +1,183 @@
+.replicate-studio {
+    display: flex;
+    flex-direction: column;
+    height: 800px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.studio-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--glass-border);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.studio-header h2 {
+    margin: 0 0 15px 0;
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.studio-tabs {
+    display: flex;
+    gap: 10px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    color: var(--color-text-muted);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--color-text);
+}
+
+.tab-btn.active {
+    background: var(--color-primary);
+    color: black;
+    font-weight: bold;
+    border-color: var(--color-primary);
+}
+
+.studio-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.studio-controls {
+    width: 350px;
+    padding: 20px;
+    border-right: 1px solid var(--glass-border);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background: rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.control-group label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.control-group input,
+.control-group textarea {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    padding: 10px;
+    border-radius: 6px;
+    color: var(--color-text);
+    font-family: inherit;
+}
+
+.file-drop-zone {
+    height: 100px;
+    border: 2px dashed var(--glass-border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.file-drop-zone:hover {
+    border-color: var(--color-primary);
+    background: rgba(0, 240, 255, 0.05);
+}
+
+.run-btn {
+    padding: 15px;
+    background: linear-gradient(45deg, var(--color-primary), #00aaff);
+    border: none;
+    border-radius: 8px;
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: auto;
+    transition: transform 0.2s;
+}
+
+.run-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 240, 255, 0.3);
+}
+
+.run-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.console-logs {
+    height: 150px;
+    background: black;
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    padding: 10px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #00ff00;
+    overflow-y: auto;
+}
+
+.studio-preview {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #050505;
+}
+
+.placeholder-preview {
+    color: var(--color-text-muted);
+    font-size: 1.2rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.result-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+}
+
+.result-media {
+    max-width: 100%;
+    max-height: 90%;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+}
+
+.download-btn {
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--glass-border);
+    color: white;
+    border-radius: 20px;
+    cursor: pointer;
+}
+
+.download-btn:hover {
+    background: white;
+    color: black;
+}

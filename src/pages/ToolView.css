@@ -1,0 +1,48 @@
+.tool-view {
+    padding-top: var(--spacing-md);
+}
+
+.tool-view-header {
+    margin-bottom: var(--spacing-md);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.back-link {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+.back-link:hover {
+    color: var(--color-primary);
+}
+
+.tool-view-content {
+    min-height: 600px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-lg);
+}
+
+.simulation-placeholder {
+    text-align: center;
+    color: var(--color-text-muted);
+}
+
+.loader {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--glass-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    margin: var(--spacing-md) auto;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

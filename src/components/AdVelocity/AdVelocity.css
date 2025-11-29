@@ -1,0 +1,77 @@
+.ad-velocity-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 600px;
+    overflow: hidden;
+    background: rgba(10, 10, 15, 0.3);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+}
+
+.velocity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--glass-border);
+    font-size: 0.7rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    -webkit-text-fill-color: var(--color-text-muted);
+}
+
+.velocity-steps {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.step {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.step.active {
+    color: var(--color-primary);
+    text-shadow: 0 0 15px rgba(0, 240, 255, 0.8), 0 0 30px rgba(0, 240, 255, 0.4);
+}
+
+.step.completed {
+    color: var(--color-text);
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+}
+
+.step-line {
+    width: 40px;
+    height: 2px;
+    background: var(--glass-border);
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+
+.step-line.completed {
+    background: var(--color-primary);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.6), 0 0 30px rgba(0, 240, 255, 0.3);
+}
+
+.velocity-content {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+    position: relative;
+}
+
+.placeholder-step {
+    text-align: center;
+    padding: 4rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}

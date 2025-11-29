@@ -1,0 +1,120 @@
+.playground-container {
+    width: 100%;
+    height: calc(100vh - 80px);
+    /* Adjust for header */
+    position: relative;
+    overflow: hidden;
+    background: radial-gradient(circle at center, rgba(112, 0, 255, 0.05) 0%, transparent 70%);
+}
+
+.playground-toolbar {
+    position: absolute;
+    top: var(--spacing-md);
+    left: var(--spacing-md);
+    z-index: 10;
+    padding: var(--spacing-sm);
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.tool-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--glass-border);
+    color: var(--color-text);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tool-btn:hover {
+    background: var(--color-primary);
+    color: black;
+}
+
+.canvas {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    cursor: grab;
+}
+
+.canvas:active {
+    cursor: grabbing;
+}
+
+.connections-layer {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+.connection-line {
+    filter: drop-shadow(0 0 5px var(--color-primary));
+}
+
+.node {
+    position: absolute;
+    width: 150px;
+    height: 80px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    cursor: grab;
+    user-select: none;
+    transition: box-shadow 0.2s;
+}
+
+.node:active {
+    cursor: grabbing;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+}
+
+.node-header {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--glass-border);
+    color: var(--color-text-muted);
+}
+
+.node.agent .node-header {
+    color: var(--color-primary);
+}
+
+.node.trigger .node-header {
+    color: var(--color-accent);
+}
+
+.node.action .node-header {
+    color: var(--color-secondary);
+}
+
+.node-content {
+    padding: 12px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.node-handle {
+    width: 10px;
+    height: 10px;
+    background: var(--color-text);
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 2px solid var(--color-bg);
+}
+
+.node-handle.input {
+    left: -5px;
+}
+
+.node-handle.output {
+    right: -5px;
+}
