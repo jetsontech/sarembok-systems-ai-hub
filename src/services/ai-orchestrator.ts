@@ -93,16 +93,16 @@ class AIOrchestrator {
      * Generic Chat/Completion for Nexus 365
      */
     async chat(message: string, systemPrompt?: string): Promise<GenerationResult> {
-        const model = this.getAvailableModel('script'); // Reuse script models for chat
+        let model = this.getAvailableModel('script'); // Reuse script models for chat
 
         if (!model) {
             return { success: false, model: 'none', error: 'Daily limit reached' };
         }
 
+        const fullPrompt = systemPrompt ? `${systemPrompt}\n\nUser: ${message}` : message;
+
         try {
             let data;
-            const fullPrompt = systemPrompt ? `${systemPrompt}\n\nUser: ${message}` : message;
-
             if (model.endpoint === 'gemini') {
                 data = await this.callGemini(fullPrompt);
             } else if (model.endpoint === 'pollinations') {
@@ -113,6 +113,22 @@ class AIOrchestrator {
             return { success: true, data, model: model.name };
         } catch (error) {
             console.error(`Chat failed with ${model.name}:`, error);
+
+            // Try fallback to Pollinations if Gemini failed
+            if (model.endpoint === 'gemini') {
+                console.log('Attempting fallback to Pollinations...');
+                const fallbackModel = this.models.script.find(m => m.endpoint === 'pollinations');
+                if (fallbackModel) {
+                    try {
+                        const data = await this.callPollinationsText(fullPrompt);
+                        this.trackUsage(fallbackModel.name);
+                        return { success: true, data, model: fallbackModel.name };
+                    } catch (fallbackError) {
+                        console.error('Fallback failed:', fallbackError);
+                    }
+                }
+            }
+
             return { success: false, model: model.name, error: String(error) };
         }
     }

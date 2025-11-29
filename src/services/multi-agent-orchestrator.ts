@@ -1,4 +1,5 @@
 import type { Agent, AgentMessage, AgentTask, AgentStatus } from '../types/Agent';
+import { aiOrchestrator } from './ai-orchestrator';
 
 class MultiAgentOrchestrator {
     private agents: Agent[] = [];
@@ -87,12 +88,29 @@ class MultiAgentOrchestrator {
         this.tasks.push(task);
         this.notify('TASK_ADDED', task);
 
-        // Simulate coordinator analyzing task
-        await this.simulateAgentAction('coordinator-1', 'Analyzing new task request...');
+        // Coordinator analyzes task using AI
+        await this.simulateAgentAction('coordinator-1', 'Analyzing task requirements and complexity...');
 
-        const bestAgent = this.findBestAgentForTask(task);
+        // Ask AI to pick the best agent
+        const agentSelectionPrompt = `
+            You are the Coordinator of an elite AI team.
+            Team Members:
+            - Deep Search (RESEARCHER): Data mining, fact checking, trends.
+            - Dev Bot (CODER): Full stack dev, code review, debugging.
+            - Logic Engine (ANALYST): Data analysis, patterns, optimization.
+            - Creative Spark (WRITER): Content generation, copywriting.
+
+            Task: "${task.title}" - ${task.description}
+
+            Which agent should handle this? Reply ONLY with the exact ID: researcher-1, coder-1, analyst-1, or writer-1.
+        `;
+
+        const selectionResult = await aiOrchestrator.chat(agentSelectionPrompt);
+        const bestAgentId = selectionResult.success ? selectionResult.data.trim() : this.findBestAgentForTask(task)?.id;
+        const bestAgent = this.agents.find(a => a.id === bestAgentId) || this.agents.find(a => a.role === 'COORDINATOR');
+
         if (bestAgent) {
-            await this.simulateAgentAction('coordinator-1', `Assigning task to ${bestAgent.name}`);
+            await this.simulateAgentAction('coordinator-1', `Selected ${bestAgent.name} for this task.`);
             this.updateAgentStatus(bestAgent.id, 'WORKING');
 
             const assignmentMsg: AgentMessage = {
@@ -105,21 +123,46 @@ class MultiAgentOrchestrator {
             };
             this.addMessage(assignmentMsg);
 
-            // Simulate agent accepting and working
+            // Agent accepts and works
             setTimeout(async () => {
-                await this.simulateAgentAction(bestAgent.id, `Starting work on: ${task.title}`);
+                await this.simulateAgentAction(bestAgent.id, `Analyzing task: ${task.title}`);
                 this.updateAgentStatus(bestAgent.id, 'THINKING');
 
-                // Simulate work completion after random delay
-                setTimeout(() => {
-                    this.completeTask(task.id, bestAgent.id);
-                }, 5000 + Math.random() * 5000);
+                // Generate initial thoughts
+                const thoughtPrompt = `
+                    You are ${bestAgent.name}, a ${bestAgent.role}.
+                    Task: ${task.title}
+                    Generate a brief, technical internal thought about how you will approach this.
+                    Keep it under 1 sentence.
+                `;
+                const thoughtResult = await aiOrchestrator.chat(thoughtPrompt);
+                if (thoughtResult.success) {
+                    await this.simulateAgentAction(bestAgent.id, thoughtResult.data);
+                }
+
+                // Perform the work (Simulated delay, then AI generation)
+                setTimeout(async () => {
+                    const workPrompt = `
+                        You are ${bestAgent.name}, a ${bestAgent.role}.
+                        Task: ${task.title} - ${task.description}
+                        
+                        Perform this task. Provide a concise but complete result/output.
+                        If it's code, provide the code snippet.
+                        If it's research, provide key bullet points.
+                        Keep it professional and high quality.
+                    `;
+
+                    const workResult = await aiOrchestrator.chat(workPrompt);
+                    const finalOutput = workResult.success ? workResult.data : "Task completed successfully.";
+
+                    this.completeTask(task.id, bestAgent.id, finalOutput);
+                }, 8000); // 8 seconds to "work"
             }, 1000);
         }
     }
 
     private findBestAgentForTask(task: AgentTask): Agent | undefined {
-        // Simple logic: match role based on keywords in title/description
+        // Fallback logic
         const text = (task.title + ' ' + task.description).toLowerCase();
         if (text.includes('code') || text.includes('bug') || text.includes('app')) return this.agents.find(a => a.role === 'CODER');
         if (text.includes('research') || text.includes('find') || text.includes('search')) return this.agents.find(a => a.role === 'RESEARCHER');
@@ -150,7 +193,7 @@ class MultiAgentOrchestrator {
         this.notify('MESSAGE_ADDED', message);
     }
 
-    private completeTask(taskId: string, agentId: string) {
+    private completeTask(taskId: string, agentId: string, result: string) {
         const task = this.tasks.find(t => t.id === taskId);
         const agent = this.agents.find(a => a.id === agentId);
 
@@ -164,7 +207,7 @@ class MultiAgentOrchestrator {
                 id: Math.random().toString(36).substr(2, 9),
                 fromAgentId: agentId,
                 toAgentId: 'coordinator-1',
-                content: `Task Completed: ${task.title}. Results are ready for review.`,
+                content: `Task Completed. Result:\n\n${result}`,
                 timestamp: Date.now(),
                 type: 'TASK_UPDATE'
             };
