@@ -13,7 +13,6 @@ import {
     Cpu,
     Zap,
     MessageSquare,
-    CheckCircle,
     Send,
     Sparkles,
     ArrowLeft,
@@ -38,6 +37,7 @@ import CodeExecutionPanel from './CodeExecutionPanel';
 import DemoScenarios from './DemoScenarios';
 import GeminiStudio from './GeminiStudio';
 import MultiAgentPanel from './MultiAgentPanel';
+import { AgentStatusWidget, ActiveTasksWidget, QuickActionsWidget } from './DashboardWidgets';
 
 interface Message {
     id: string;
@@ -610,73 +610,25 @@ const Nexus365: React.FC = () => {
                             </motion.div>
                         ) : activeTab === 'dashboard' && messages.length === 0 ? (
                             <>
-                                {/* Priority Inbox Panel */}
+                                {/* System Status & Quick Actions */}
                                 <motion.div
-                                    className="nexus-panel flex-1"
+                                    className="nexus-panel flex-1 flex flex-col gap-4"
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.1 }}
                                 >
-                                    <div className="panel-header">
-                                        <div className="panel-title">
-                                            <Mail size={20} />
-                                            <span>Priority Intelligence</span>
-                                        </div>
-                                        <span className="text-xs text-cyan-400 border border-cyan-400/30 px-2 py-1 rounded">AI TRIAGE ACTIVE</span>
-                                    </div>
-
-                                    <div className="flex flex-col gap-2 overflow-y-auto">
-                                        {emails.map((email, index) => (
-                                            <motion.div
-                                                key={email.id}
-                                                className="holo-item group"
-                                                initial={{ opacity: 0, x: -20 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: 0.2 + (index * 0.1) }}
-                                            >
-                                                <div className={`holo-avatar ${email.sentiment === 'urgent' ? 'border-red-500 text-red-500' : ''}`}>
-                                                    {email.from.charAt(0)}
-                                                </div>
-                                                <div className="holo-content">
-                                                    <div className="flex justify-between items-start">
-                                                        <h4 className="holo-title group-hover:text-cyan-400 transition-colors">{email.subject}</h4>
-                                                        <span className="holo-meta">{email.time}</span>
-                                                    </div>
-                                                    <p className="holo-subtitle">{email.preview}</p>
-                                                </div>
-                                                {email.sentiment === 'urgent' && (
-                                                    <Zap size={16} className="text-red-500 ml-2" />
-                                                )}
-                                            </motion.div>
-                                        ))}
-                                    </div>
+                                    <AgentStatusWidget />
+                                    <QuickActionsWidget onNavigate={setActiveTab} />
                                 </motion.div>
 
-                                {/* Active Tasks Panel */}
+                                {/* Active Processes */}
                                 <motion.div
-                                    className="nexus-panel h-1/3"
+                                    className="nexus-panel h-1/3 flex flex-col"
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.3 }}
                                 >
-                                    <div className="panel-header">
-                                        <div className="panel-title">
-                                            <CheckCircle size={20} />
-                                            <span>Auto-Generated Tasks</span>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex items-center gap-3 p-2 hover:bg-white/5 rounded transition-colors cursor-pointer">
-                                            <div className="w-5 h-5 rounded border border-cyan-400 flex items-center justify-center"></div>
-                                            <span className="text-sm">Review 'Project Skynet' proposal</span>
-                                            <span className="ml-auto text-xs text-gray-500">From Email</span>
-                                        </div>
-                                        <div className="flex items-center gap-3 p-2 hover:bg-white/5 rounded transition-colors cursor-pointer">
-                                            <div className="w-5 h-5 rounded border border-purple-500 flex items-center justify-center"></div>
-                                            <span className="text-sm">Approve Q4 Budget</span>
-                                            <span className="ml-auto text-xs text-gray-500">High Priority</span>
-                                        </div>
-                                    </div>
+                                    <ActiveTasksWidget />
                                 </motion.div>
                             </>
                         ) : (
