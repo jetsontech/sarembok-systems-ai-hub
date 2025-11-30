@@ -594,7 +594,7 @@ const Nexus365: React.FC = () => {
                                     <ActiveTasksWidget />
                                 </motion.div>
                             </>
-                        ) : (
+                        ) : (activeTab === 'chat' || activeTab === 'dashboard') ? (
                             /* AI Chat Panel */
                             <motion.div
                                 className="nexus-panel flex-1 flex flex-col"
@@ -706,7 +706,7 @@ const Nexus365: React.FC = () => {
                                     </div>
                                 </div>
                             </motion.div>
-                        )}
+                        ) : null}
                     </div>
 
                     {/* Right Column: Schedule & Assistant */}
