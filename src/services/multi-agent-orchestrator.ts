@@ -61,6 +61,26 @@ class MultiAgentOrchestrator {
         ];
     }
 
+    public spawnAgent() {
+        const roles = ['RESEARCHER', 'CODER', 'ANALYST', 'WRITER'] as const;
+        const randomRole = roles[Math.floor(Math.random() * roles.length)];
+        const id = Math.random().toString(36).substr(2, 9);
+
+        const newAgent: Agent = {
+            id: `agent-${id}`,
+            name: `Nexus ${randomRole.charAt(0) + randomRole.slice(1).toLowerCase()} ${id.substr(0, 3)}`,
+            role: randomRole,
+            capabilities: ['General Intelligence', 'Task Execution'],
+            status: 'IDLE',
+            memory: [],
+            avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${id}`
+        };
+
+        this.agents.push(newAgent);
+        this.notify('AGENT_UPDATED', newAgent);
+        return newAgent;
+    }
+
     public getAgents(): Agent[] {
         return this.agents;
     }

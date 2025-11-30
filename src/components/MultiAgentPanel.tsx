@@ -69,7 +69,10 @@ const MultiAgentPanel: React.FC = () => {
                         <Terminal size={14} />
                         LOGS
                     </button>
-                    <button className="px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded text-xs font-mono transition-colors flex items-center gap-2">
+                    <button
+                        onClick={() => multiAgentOrchestrator.spawnAgent()}
+                        className="px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 rounded text-xs font-mono transition-colors flex items-center gap-2"
+                    >
                         <Plus size={14} />
                         SPAWN AGENT
                     </button>
