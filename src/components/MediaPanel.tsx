@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Code, Video, Music, FileText, Download, Trash2, Play, Zap } from 'lucide-react';
+import { Upload, Code, Video, Music, FileText, Download, Trash2, Play, Zap, Image as ImageIcon } from 'lucide-react';
 import './MediaPanel.css';
 
 export interface MediaItem {
     id: string;
-    type: 'code' | 'video' | 'audio' | 'text';
+    type: 'code' | 'video' | 'audio' | 'text' | 'image';
     name: string;
     content: string | File;
     timestamp: Date;
@@ -27,8 +27,9 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ mediaItems, setMediaItems }) =>
         Array.from(files).forEach(file => {
             const type = file.type.startsWith('video/') ? 'video' :
                 file.type.startsWith('audio/') ? 'audio' :
-                    file.type.startsWith('text/') || file.name.endsWith('.js') || file.name.endsWith('.ts') || file.name.endsWith('.py') ? 'code' :
-                        'text';
+                    file.type.startsWith('image/') ? 'image' :
+                        file.type.startsWith('text/') || file.name.endsWith('.js') || file.name.endsWith('.ts') || file.name.endsWith('.py') ? 'code' :
+                            'text';
 
             const newItem: MediaItem = {
                 id: Date.now().toString() + Math.random(),
@@ -86,6 +87,7 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ mediaItems, setMediaItems }) =>
             case 'code': return <Code size={20} />;
             case 'video': return <Video size={20} />;
             case 'audio': return <Music size={20} />;
+            case 'image': return <ImageIcon size={20} />;
             default: return <FileText size={20} />;
         }
     };
@@ -122,7 +124,7 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ mediaItems, setMediaItems }) =>
                                 ref={fileInputRef}
                                 type="file"
                                 multiple
-                                accept="video/*,audio/*,.js,.ts,.py,.txt,.json,.html,.css"
+                                accept="video/*,audio/*,image/*,.js,.ts,.py,.txt,.json,.html,.css"
                                 onChange={handleFileUpload}
                                 style={{ display: 'none' }}
                             />
@@ -180,7 +182,7 @@ const MediaPanel: React.FC<MediaPanelProps> = ({ mediaItems, setMediaItems }) =>
                                             </div>
                                         </div>
                                         <div className="media-actions">
-                                            {item.type === 'video' && typeof item.content !== 'string' && (
+                                            {(item.type === 'video' || item.type === 'image') && typeof item.content !== 'string' && (
                                                 <button
                                                     className="action-btn"
                                                     onClick={() => {

@@ -23,6 +23,8 @@ import MultiAgentPanel from './MultiAgentPanel';
 import MediaPanel, { type MediaItem } from './MediaPanel';
 import ApiSettings from './ApiSettings';
 import { BackendService } from '../services/BackendService';
+import { aiOrchestrator } from '../services/ai-orchestrator';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
     id: string;
@@ -96,6 +98,7 @@ const Nexus365: React.FC = () => {
             const audioMatch = lastResponse.match(/\[ACTION: PROCESS_AUDIO task="([^"]+)"\]/);
             const imageMatch = lastResponse.match(/\[ACTION: PROCESS_IMAGE task="([^"]+)"(?:\s+param="([^"]+)")?\]/);
             const videoMatch = lastResponse.match(/\[ACTION: PROCESS_VIDEO task="([^"]+)"(?:\s+param="([^"]+)")?\]/);
+            const genImageMatch = lastResponse.match(/\[ACTION: GENERATE_IMAGE prompt="([^"]+)"\]/);
 
             if (audioMatch) {
                 handleAudioProcessing(audioMatch[1]);
@@ -103,6 +106,8 @@ const Nexus365: React.FC = () => {
                 handleImageProcessing(imageMatch[1], imageMatch[2]);
             } else if (videoMatch) {
                 handleVideoProcessing(videoMatch[1], videoMatch[2]);
+            } else if (genImageMatch) {
+                handleImageGeneration(genImageMatch[1]);
             }
 
             if ('speechSynthesis' in window) {
@@ -265,6 +270,55 @@ const Nexus365: React.FC = () => {
                 id: Date.now().toString(),
                 role: 'assistant',
                 content: `❌ Processing failed: ${error}`,
+                timestamp: new Date()
+            }]);
+        }
+    };
+
+    const handleImageGeneration = async (prompt: string) => {
+        try {
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `🎨 Generating image: "${prompt}"...`,
+                timestamp: new Date()
+            }]);
+
+            const result = await aiOrchestrator.generateImage(prompt);
+
+            if (result.success && result.data) {
+                // Pollinations returns a URL
+                const imageUrl = result.data;
+
+                // Fetch the image to create a File object (so it appears in Media Panel)
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                const file = new File([blob], `generated_${Date.now()}.jpg`, { type: 'image/jpeg' });
+
+                const newItem: MediaItem = {
+                    id: Date.now().toString(),
+                    type: 'image',
+                    name: `generated_${Date.now()}.jpg`,
+                    content: file,
+                    timestamp: new Date()
+                };
+
+                setMediaItems(prev => [newItem, ...prev]);
+
+                setMessages(prev => [...prev, {
+                    id: Date.now().toString(),
+                    role: 'assistant',
+                    content: `✅ Image generated successfully!\n\n![Generated Image](${imageUrl})`,
+                    timestamp: new Date()
+                }]);
+            } else {
+                throw new Error(result.error || 'Generation failed');
+            }
+        } catch (error) {
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `❌ Image generation failed: ${error}`,
                 timestamp: new Date()
             }]);
         }
@@ -491,7 +545,17 @@ Acknowledge the request briefly, then output the appropriate tag. Do NOT provide
                                     )}
                                     {messages.map((msg, idx) => (
                                         <div key={idx} className={`chat-message ${msg.role}`}>
-                                            <div className="whitespace-pre-wrap">{msg.content}</div>
+                                            <div className="markdown-content">
+                                                <ReactMarkdown
+                                                    components={{
+                                                        img: ({ node, ...props }) => <img {...props} className="rounded-lg max-w-full h-auto my-2 border border-white/10 shadow-lg" />,
+                                                        a: ({ node, ...props }) => <a {...props} className="text-blue-400 hover:underline" target="_blank" rel="noopener noreferrer" />,
+                                                        code: ({ node, ...props }) => <code {...props} className="bg-black/30 rounded px-1 py-0.5 text-sm font-mono text-blue-300" />
+                                                    }}
+                                                >
+                                                    {msg.content}
+                                                </ReactMarkdown>
+                                            </div>
                                         </div>
                                     ))}
                                     {isThinking && (
