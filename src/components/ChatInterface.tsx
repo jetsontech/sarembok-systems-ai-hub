@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useProject } from '../context/ProjectContext';
 import { useHistory } from '../context/HistoryContext';
+import { aiOrchestrator } from '../services/ai-orchestrator';
 import PromptGenerator from './PromptGenerator';
 import './ChatInterface.css';
 
@@ -136,14 +137,13 @@ const ChatInterface: React.FC = () => {
             const toneInstruction = `Respond in a ${tone} tone.`;
             const fullPrompt = `${systemContext}${toneInstruction} User: ${newMessage.content}`;
 
-            const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(fullPrompt)}`);
+            const response = await aiOrchestrator.chat(fullPrompt);
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText.includes('content_filter') ? 'Content filtered' : 'API Error');
+            if (!response.success) {
+                throw new Error(response.error || 'API Error');
             }
 
-            const text = await response.text();
+            const text = response.data;
 
             const aiMessage: Message = {
                 id: (Date.now() + 1).toString(),

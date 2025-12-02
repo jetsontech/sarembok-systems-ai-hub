@@ -16,7 +16,7 @@ const ApiSettings: React.FC<ApiSettingsProps> = ({ isOpen, onClose }) => {
 
         if (storedReplicate) setReplicateKey(storedReplicate);
         if (storedProvider) setVideoProvider(storedProvider);
-    }, []);
+    }, [setReplicateKey, setVideoProvider]);
 
     const handleSave = () => {
         localStorage.setItem('replicate_key', replicateKey);

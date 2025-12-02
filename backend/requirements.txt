@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+librosa
+soundfile
+numpy
+scipy
+Pillow
+# moviepy  # Uncomment for video processing support

@@ -5,18 +5,22 @@
 /* Mobile Devices (< 768px) */
 @media (max-width: 767px) {
 
-    /* Hide sidebar by default on mobile */
+    /* Fixed bottom navigation bar */
     .nexus-sidebar {
+        position: fixed;
         width: 100%;
         height: 60px;
         bottom: 0;
+        left: 0;
         top: auto;
         flex-direction: row;
         justify-content: space-around;
+        align-items: center;
         padding: 0.5rem;
         background: rgba(0, 0, 0, 0.95);
         border-right: none;
-        border-top: 1px solid rgba(0, 240, 255, 0.1);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 1000;
     }
 
     .nexus-logo {
@@ -26,7 +30,8 @@
     .nexus-nav {
         flex-direction: row;
         margin-top: 0;
-        gap: 0.5rem;
+        margin-bottom: 0;
+        gap: 0;
         width: 100%;
         justify-content: space-around;
     }
@@ -36,30 +41,51 @@
         height: 40px;
     }
 
+    .nexus-nav-item.active::after {
+        display: none;
+        /* Remove side indicator */
+    }
+
+    .nexus-nav-item.active {
+        background: rgba(59, 130, 246, 0.2);
+        border-radius: 50%;
+    }
+
     /* Adjust main content for bottom nav */
     .nexus-main {
+        position: absolute;
         left: 0;
-        top: 60px;
+        top: 0;
+        right: 0;
         bottom: 60px;
+        /* Space for bottom nav */
         padding: 1rem;
+        width: 100%;
     }
 
     /* Header adjustments */
     .nexus-header {
-        padding: 1rem;
-        font-size: 0.9rem;
+        padding: 0.75rem 1rem;
+        height: 60px;
     }
 
-    .nexus-search {
+    .nexus-brand {
+        font-size: 1.1rem;
+    }
+
+    .nexus-status {
         display: none;
-        /* Hide search on mobile, use command palette */
+        /* Hide status on mobile to save space */
     }
 
     /* Single column layout */
     .nexus-dashboard {
         grid-template-columns: 1fr;
         gap: 1rem;
+        padding: 1rem;
         overflow-y: auto;
+        height: calc(100% - 60px);
+        /* Subtract header */
     }
 
     /* Stack panels vertically */
@@ -68,150 +94,59 @@
         padding: 1rem;
     }
 
-    /* Smaller text */
-    .panel-title {
-        font-size: 0.75rem;
+    /* Chat specific mobile tweaks */
+    .chat-container {
+        padding-bottom: 1rem;
     }
 
-    .glitch-text {
-        font-size: 0.8rem;
-        letter-spacing: 1px;
+    .chat-message {
+        max-width: 90%;
+        font-size: 0.9rem;
     }
 
-    /* Back button */
-    .nexus-back-btn {
-        left: 1rem;
-        top: 1rem;
-        width: 35px;
-        height: 35px;
+    .chat-input-wrapper {
+        position: sticky;
+        bottom: 0;
+        background: var(--color-bg);
+        padding-top: 0.5rem;
     }
 
     /* History sidebar full width on mobile */
     .nexus-history-sidebar {
         width: 100%;
+        z-index: 1001;
     }
 
-    /* Hide 3D background on mobile for performance */
-    .nexus-3d-layer {
-        display: none;
-    }
-
-    .nexus-grid {
-        background-size: 30px 30px;
-    }
-
-    /* Adjust FAB */
-    .nexus-fab {
-        bottom: 80px;
-        right: 1rem;
-        width: 50px;
-        height: 50px;
+    /* Media Panel Mobile */
+    .media-panel-container {
+        height: 400px;
+        /* Fixed height for media panel on mobile */
     }
 }
 
 /* Tablet Devices (768px - 1024px) */
 @media (min-width: 768px) and (max-width: 1024px) {
     .nexus-sidebar {
-        width: 60px;
+        width: 70px;
         padding: 1.5rem 0;
     }
 
     .nexus-main {
-        left: 60px;
-        padding: 1.5rem;
+        padding: 0;
     }
 
     .nexus-dashboard {
         grid-template-columns: 1fr;
+        /* Stack columns on tablet too if narrow */
         gap: 1.5rem;
-    }
-
-    .nexus-header {
-        padding: 1.25rem 1.5rem;
-    }
-
-    .nexus-back-btn {
-        left: 70px;
-    }
-
-    .nexus-history-sidebar {
-        width: 300px;
-    }
-
-    /* Reduce 3D complexity on tablet */
-    .nexus-3d-layer canvas {
-        image-rendering: optimizeSpeed;
+        padding: 1.5rem;
     }
 }
 
 /* Desktop (> 1024px) - Default styles apply */
 @media (min-width: 1025px) {
-
-    /* Ensure proper layout on large screens */
     .nexus-dashboard {
         max-width: 1800px;
         margin: 0 auto;
-    }
-}
-
-/* Ultra-wide screens (> 1920px) */
-@media (min-width: 1921px) {
-    .nexus-main {
-        padding: 3rem;
-    }
-
-    .nexus-dashboard {
-        gap: 3rem;
-        max-width: 2200px;
-    }
-}
-
-/* Touch device optimizations */
-@media (hover: none) and (pointer: coarse) {
-
-    .nexus-nav-item,
-    .holo-item,
-    button {
-        min-height: 44px;
-        /* iOS minimum touch target */
-        min-width: 44px;
-    }
-
-    /* Remove hover effects on touch */
-    .nexus-nav-item:hover,
-    .holo-item:hover {
-        transform: none;
-    }
-
-    /* Larger tap targets */
-    .icon-btn {
-        padding: 0.75rem;
-    }
-}
-
-/* Landscape mobile */
-@media (max-width: 767px) and (orientation: landscape) {
-    .nexus-sidebar {
-        height: 50px;
-    }
-
-    .nexus-main {
-        bottom: 50px;
-    }
-
-    .nexus-fab {
-        bottom: 60px;
-    }
-}
-
-/* Reduce motion for accessibility */
-@media (prefers-reduced-motion: reduce) {
-
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
     }
 }

@@ -1,48 +1,34 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutGrid,
     Mic,
-    Search,
-    Bell,
+    MicOff,
     Settings,
-    Cpu,
-    Zap,
     MessageSquare,
     Send,
-    Sparkles,
-    ArrowLeft,
+    Palette,
     History,
     Download,
-    Volume2,
-    VolumeX,
-    Users
+    Users,
+    Activity,
+    X
 } from 'lucide-react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import { Command } from 'cmdk';
-import HoloGlobe from './HoloGlobe';
-import HUDOverlay from './HUDOverlay';
-import VoiceVisualizer from './VoiceVisualizer';
-import HoloScanner from './HoloScanner';
 import { useNexusSound } from '../hooks/useNexusSound';
 import { useNexusBrain } from '../hooks/useNexusBrain';
 import './Nexus365.css';
 import './Nexus365-responsive.css';
-import ImageUpload, { type UploadedImage } from './ImageUpload';
-import CodeExecutionPanel from './CodeExecutionPanel';
 import DemoScenarios from './DemoScenarios';
-import GeminiStudio from './GeminiStudio';
 import MultiAgentPanel from './MultiAgentPanel';
-import { AgentStatusWidget, ActiveTasksWidget, QuickActionsWidget } from './DashboardWidgets';
+import MediaPanel, { type MediaItem } from './MediaPanel';
+import ApiSettings from './ApiSettings';
+import { BackendService } from '../services/BackendService';
 
 interface Message {
     id: string;
     role: 'user' | 'assistant';
     content: string;
     timestamp: Date;
-    images?: UploadedImage[];
     executableCode?: string;
     codeExecutionResult?: any;
     functionCall?: any;
@@ -50,32 +36,21 @@ interface Message {
 }
 
 const Nexus365: React.FC = () => {
-    const navigate = useNavigate();
-    const { playHover, playClick, playType } = useNexusSound();
-    const { processQuery, isThinking } = useNexusBrain();
+    const { playClick, playType } = useNexusSound();
+    const { processQuery, isThinking, lastResponse, error, executableCode, codeExecutionResult, functionCall, functionResult } = useNexusBrain();
+
+    // State
     const [activeTab, setActiveTab] = useState('dashboard');
-    const [isBooting, setIsBooting] = useState(true);
     const [isListening, setIsListening] = useState(false);
-    const [isScanning, setIsScanning] = useState(false);
-    const [performanceMode, setPerformanceMode] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
-    const [commandOpen, setCommandOpen] = useState(false);
-    const [historyOpen, setHistoryOpen] = useState(false);
-    const [settingsOpen, setSettingsOpen] = useState(false);
-    // const [apiKey, setApiKey] = useState(localStorage.getItem('GEMINI_API_KEY') || ''); // API Key is now hardcoded
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
-    const [isTyping, setIsTyping] = useState(false);
-    const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
-    const [showDemos, setShowDemos] = useState(false);
+    const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+
     const recognitionRef = useRef<any>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-
-    // Boot Sequence
-    useEffect(() => {
-        const bootTimer = setTimeout(() => setIsBooting(false), 3000);
-        return () => clearTimeout(bootTimer);
-    }, []);
+    const prevIsThinking = useRef(isThinking);
 
     // Initialize Speech Recognition
     useEffect(() => {
@@ -88,7 +63,7 @@ const Nexus365: React.FC = () => {
 
             recognitionRef.current.onresult = (event: any) => {
                 const transcript = event.results[0][0].transcript;
-                handleVoiceCommand(transcript);
+                handleSendMessage(transcript);
                 setIsListening(false);
             };
 
@@ -97,162 +72,14 @@ const Nexus365: React.FC = () => {
         }
     }, []);
 
-    // Command Palette Shortcut
+    // Auto-scroll to bottom of chat
     useEffect(() => {
-        const down = (e: KeyboardEvent) => {
-            if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                setCommandOpen(open => !open);
-            }
-            if (e.key === 'h' && (e.metaKey || e.ctrlKey)) {
-                e.preventDefault();
-                setHistoryOpen(open => !open);
-            }
-        };
-        document.addEventListener('keydown', down);
-        return () => document.removeEventListener('keydown', down);
-    }, []);
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isThinking]);
 
-    const handleVoiceCommand = async (command: string) => {
-        const userMessage: Message = {
-            id: Date.now().toString(),
-            role: 'user',
-            content: command,
-            timestamp: new Date()
-        };
-        setMessages(prev => [...prev, userMessage]);
-        setIsTyping(true);
-
-        try {
-            const response = await processQuery(command);
-
-            const aiMessage: Message = {
-                id: (Date.now() + 1).toString(),
-                role: 'assistant',
-                content: response || "I'm having trouble connecting to my neural network.",
-                timestamp: new Date()
-            };
-            setMessages(prev => [...prev, aiMessage]);
-
-            // Speak the response
-            if ('speechSynthesis' in window && response && !isMuted) {
-                const utterance = new SpeechSynthesisUtterance(response);
-                // Try to find a good voice
-                const voices = window.speechSynthesis.getVoices();
-                const preferredVoice = voices.find(v =>
-                    v.name.includes('Google US English') ||
-                    v.name.includes('Microsoft Zira') ||
-                    v.name.includes('Samantha')
-                );
-                if (preferredVoice) utterance.voice = preferredVoice;
-                utterance.rate = 1.0; // Slightly slower for more authority
-                utterance.pitch = 1.0;
-                window.speechSynthesis.speak(utterance);
-            }
-        } catch (error) {
-            console.error('Voice command error:', error);
-            setMessages(prev => [...prev, {
-                id: Date.now().toString(),
-                role: 'assistant',
-                content: "Error: Neural link unstable. Please check your connection.",
-                timestamp: new Date()
-            }]);
-        } finally {
-            setIsTyping(false);
-        }
-    };
-
-    const toggleVoice = () => {
-        if (isListening) {
-            recognitionRef.current?.stop();
-        } else {
-            recognitionRef.current?.start();
-            setIsListening(true);
-        }
-    };
-
-    const handleSendMessage = async (overridePrompt?: string, options: any = {}) => {
-        const promptText = overridePrompt || inputValue;
-        if (!promptText.trim() && uploadedImages.length === 0) return;
-
-        const userMessage: Message = {
-            id: Date.now().toString(),
-            role: 'user',
-            content: promptText,
-            timestamp: new Date(),
-            images: uploadedImages
-        };
-
-        setMessages(prev => [...prev, userMessage]);
-        setInputValue('');
-        setUploadedImages([]);
-        setIsTyping(true);
-        setShowDemos(false);
-
-        try {
-            // Pass images and options to the brain
-            await processQuery(promptText, {
-                images: userMessage.images,
-                ...options
-            });
-
-            // Get the latest state from the brain hook (we need to access the hook's state directly, 
-            // but since processQuery is async, we might need to rely on the return value or refetch state.
-            // Actually, useNexusBrain updates its state. We should probably return the full result object from processQuery
-            // or access the state. For now, let's assume processQuery returns the text and we get other data from the hook state 
-            // in the next render cycle? No, that's race-conditiony.
-            // Let's modify handleSendMessage to use the data returned by processQuery if we updated it to return full data.
-            // Wait, I updated useNexusBrain to return `data.response` (string). 
-            // I should have updated it to return the full object. 
-            // Let's assume for now I can get the side-effects from the hook state after a small delay or 
-            // better yet, let's just use the text response for now and I'll fix the hook return type in a follow-up if needed.
-            // Actually, I can access `executableCode` etc from the `useNexusBrain` hook state, but it might not be updated *immediately* 
-            // in this closure. 
-            // A better approach: The `useNexusBrain` hook exposes `executableCode`, `codeExecutionResult` etc.
-            // I should use those values. However, they are state variables.
-            // Let's rely on the fact that `processQuery` sets the state, and we can read it.
-            // BUT, to save it to the message history, we need the values *right now*.
-            // I will modify `useNexusBrain` to return the full object in the next step to be clean.
-            // For this step, let's assume `processQuery` returns the text, and we'll grab the extras from the hook state 
-            // using a `useEffect` or just by trusting the hook updates.
-            // Actually, let's just render the text for now and I'll do a quick fix on `useNexusBrain` to return the full object
-            // so I can save it to the message.
-
-            // WAIT: I can't easily change the hook return type in the middle of this multi-replace.
-            // I will implement a workaround: I'll read the `useNexusBrain` state in a useEffect to detect when it finishes thinking
-            // and then append the message.
-            // OR, I can just accept that I need to update `useNexusBrain` first. 
-            // I already updated `useNexusBrain` to return `data.response`.
-            // Let's stick to the plan: Update UI now, fix data flow if needed.
-
-            // Actually, looking at my previous `useNexusBrain` update:
-            // It returns `data.response`.
-            // It sets state `executableCode`, `codeExecutionResult`, etc.
-
-            // I will use a `useEffect` to watch `isThinking`. When it goes from true to false, 
-            // and there is no error, I'll add the assistant message with all the data.
-
-        } catch (error) {
-            console.error('Error:', error);
-            setMessages(prev => [...prev, {
-                id: Date.now().toString(),
-                role: 'assistant',
-                content: "I encountered an error processing that request.",
-                timestamp: new Date()
-            }]);
-        } finally {
-            setIsTyping(false);
-        }
-    };
-
-    // Effect to handle AI response completion and add to message history
-    // We need to track the previous isThinking state
-    const prevIsThinking = useRef(isThinking);
-    const { executableCode, codeExecutionResult, functionCall, functionResult, lastResponse, error } = useNexusBrain();
-
+    // Handle AI Response
     useEffect(() => {
         if (prevIsThinking.current && !isThinking && !error && lastResponse) {
-            // AI just finished thinking
             const aiMessage: Message = {
                 id: Date.now().toString(),
                 role: 'assistant',
@@ -265,45 +92,234 @@ const Nexus365: React.FC = () => {
             };
             setMessages(prev => [...prev, aiMessage]);
 
-            // Speak response
-            if ('speechSynthesis' in window && !isMuted) {
-                const utterance = new SpeechSynthesisUtterance(lastResponse);
+            // Check for processing actions
+            const audioMatch = lastResponse.match(/\[ACTION: PROCESS_AUDIO task="([^"]+)"\]/);
+            const imageMatch = lastResponse.match(/\[ACTION: PROCESS_IMAGE task="([^"]+)"(?:\s+param="([^"]+)")?\]/);
+            const videoMatch = lastResponse.match(/\[ACTION: PROCESS_VIDEO task="([^"]+)"(?:\s+param="([^"]+)")?\]/);
+
+            if (audioMatch) {
+                handleAudioProcessing(audioMatch[1]);
+            } else if (imageMatch) {
+                handleImageProcessing(imageMatch[1], imageMatch[2]);
+            } else if (videoMatch) {
+                handleVideoProcessing(videoMatch[1], videoMatch[2]);
+            }
+
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(lastResponse.replace(/\[ACTION:.*?\]/g, ''));
                 const voices = window.speechSynthesis.getVoices();
                 const preferredVoice = voices.find(v =>
                     v.name.includes('Google US English') ||
-                    v.name.includes('Microsoft Zira') ||
-                    v.name.includes('Samantha')
+                    v.name.includes('Microsoft Zira')
                 );
                 if (preferredVoice) utterance.voice = preferredVoice;
                 window.speechSynthesis.speak(utterance);
             }
         }
         prevIsThinking.current = isThinking;
-    }, [isThinking, lastResponse, error, executableCode, codeExecutionResult, functionCall, functionResult, isMuted]);
+    }, [isThinking, lastResponse, error, executableCode, codeExecutionResult, functionCall, functionResult]);
 
-    const executeCommand = (command: string) => {
-        setCommandOpen(false);
-        switch (command) {
-            case 'dashboard':
-            case 'chat':
-            case 'studio':
-            case 'agents':
-                setActiveTab(command);
-                break;
-            case 'voice':
-                toggleVoice();
-                break;
-            case 'history':
-                setHistoryOpen(true);
-                break;
-            case 'export':
-                exportConversation();
-                break;
-            case 'scan':
-                setIsScanning(prev => !prev);
-                break;
-            default:
-                handleVoiceCommand(command);
+    const handleAudioProcessing = async (task: string) => {
+        const audioItem = mediaItems.find(item => item.type === 'audio' || item.type === 'video');
+        if (!audioItem || !(audioItem.content instanceof File)) {
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: "Error: No audio file found to process. Please upload a file first.",
+                timestamp: new Date()
+            }]);
+            return;
+        }
+
+        try {
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `⚡ Sending ${audioItem.name} to Nexus Audio Engine for ${task}...`,
+                timestamp: new Date()
+            }]);
+
+            const processedBlob = await BackendService.processAudio(audioItem.content, task);
+
+            // Create new media item for the result
+            const newFile = new File([processedBlob], `processed_${audioItem.name}`, { type: 'audio/wav' });
+            const newItem: MediaItem = {
+                id: Date.now().toString(),
+                type: 'audio',
+                name: `processed_${audioItem.name}`,
+                content: newFile,
+                timestamp: new Date()
+            };
+
+            setMediaItems(prev => [newItem, ...prev]);
+
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `✅ Processing complete! New file: processed_${audioItem.name}`,
+                timestamp: new Date()
+            }]);
+
+        } catch (error) {
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `❌ Processing failed: ${error}`,
+                timestamp: new Date()
+            }]);
+        }
+    };
+
+    const handleImageProcessing = async (task: string, param?: string) => {
+        const imageItem = mediaItems.find(item => item.name.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/i));
+        if (!imageItem || !(imageItem.content instanceof File)) {
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: "Error: No image file found to process. Please upload an image first.",
+                timestamp: new Date()
+            }]);
+            return;
+        }
+
+        try {
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `🎨 Processing ${imageItem.name} with ${task}...`,
+                timestamp: new Date()
+            }]);
+
+            const processedBlob = await BackendService.processImage(imageItem.content, task, param);
+
+            const newFile = new File([processedBlob], `processed_${imageItem.name}`, { type: 'image/png' });
+            const newItem: MediaItem = {
+                id: Date.now().toString(),
+                type: 'code', // Using 'code' as generic file type
+                name: `processed_${imageItem.name}`,
+                content: newFile,
+                timestamp: new Date()
+            };
+
+            setMediaItems(prev => [newItem, ...prev]);
+
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `✅ Image processing complete! New file: processed_${imageItem.name}`,
+                timestamp: new Date()
+            }]);
+
+        } catch (error) {
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `❌ Processing failed: ${error}`,
+                timestamp: new Date()
+            }]);
+        }
+    };
+
+    const handleVideoProcessing = async (task: string, param?: string) => {
+        const videoItem = mediaItems.find(item => item.type === 'video');
+        if (!videoItem || !(videoItem.content instanceof File)) {
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: "Error: No video file found to process. Please upload a video first.",
+                timestamp: new Date()
+            }]);
+            return;
+        }
+
+        try {
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `🎬 Processing ${videoItem.name} with ${task}...`,
+                timestamp: new Date()
+            }]);
+
+            const processedBlob = await BackendService.processVideo(videoItem.content, task, param);
+
+            const newFile = new File([processedBlob], `processed_${videoItem.name}`, { type: 'video/mp4' });
+            const newItem: MediaItem = {
+                id: Date.now().toString(),
+                type: 'video',
+                name: `processed_${videoItem.name}`,
+                content: newFile,
+                timestamp: new Date()
+            };
+
+            setMediaItems(prev => [newItem, ...prev]);
+
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `✅ Video processing complete! New file: processed_${videoItem.name}`,
+                timestamp: new Date()
+            }]);
+
+        } catch (error) {
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: `❌ Processing failed: ${error}`,
+                timestamp: new Date()
+            }]);
+        }
+    };
+
+    const handleSendMessage = async (overridePrompt?: string) => {
+        const promptText = overridePrompt || inputValue;
+        if (!promptText.trim()) return;
+
+        playClick();
+
+        const userMessage: Message = {
+            id: Date.now().toString(),
+            role: 'user',
+            content: promptText,
+            timestamp: new Date()
+        };
+
+        setMessages(prev => [...prev, userMessage]);
+        setInputValue('');
+
+        // If we're not on the chat tab, switch to it so the user sees the interaction
+        if (activeTab !== 'chat') setActiveTab('chat');
+
+        try {
+            // Check for uploaded media to include in context
+            let finalPrompt = promptText;
+            if (mediaItems.length > 0) {
+                const mediaContext = mediaItems.map(item =>
+                    `[File: ${item.name} (${item.type})]`
+                ).join('\n');
+
+                finalPrompt = `${promptText}\n\nContext - Uploaded Files:\n${mediaContext}\n\nSYSTEM INSTRUCTION: You are Nexus, a powerful AI with multimedia processing capabilities. When users request media processing, output command tags:
+
+AUDIO: [ACTION: PROCESS_AUDIO task="restructure-hiphop"] or task="denoise", "speed-up", "slow-down"
+IMAGE: [ACTION: PROCESS_IMAGE task="enhance-brightness"] or task="resize", "sharpen", "blur", "grayscale", "edge-detect", "emboss", "enhance-contrast", "enhance-color"
+VIDEO: [ACTION: PROCESS_VIDEO task="trim" param="0-10"] or task="speed-up", "slow-down"
+
+Acknowledge the request briefly, then output the appropriate tag. Do NOT provide scripts.`;
+            }
+
+            await processQuery(finalPrompt);
+        } catch (err) {
+            console.error("Error sending message:", err);
+        }
+    };
+
+    const toggleVoice = () => {
+        playClick();
+        if (isListening) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+        } else {
+            recognitionRef.current?.start();
+            setIsListening(true);
         }
     };
 
@@ -316,521 +332,274 @@ const Nexus365: React.FC = () => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `nexus-conversation-${Date.now()}.txt`;
+        a.download = `nexus-chat-${Date.now()}.txt`;
         a.click();
         URL.revokeObjectURL(url);
     };
 
-    const clearHistory = () => {
-        if (confirm('Clear all conversation history?')) {
-            setMessages([]);
-            setHistoryOpen(false);
-        }
-    };
-
     return (
         <div className="nexus-container">
-            {/* 3D Holographic Layer */}
-            <div className="nexus-3d-layer">
-                <Canvas camera={{ position: [0, 0, 4], fov: 45 }}>
-                    <ambientLight intensity={0.5} />
-                    <pointLight position={[10, 10, 10]} />
-                    <HoloGlobe speed={performanceMode ? 3 : 1} />
-                    <OrbitControls enableZoom={false} autoRotate autoRotateSpeed={0.5} />
-                </Canvas>
-            </div>
-
-            {/* Animated Background Grid */}
-            <div className="nexus-grid"></div>
-
-            {/* Jarvis HUD Layer */}
-            {!isBooting && (
-                <>
-                    <HUDOverlay onReactorClick={() => { playClick(); setPerformanceMode(!performanceMode); }} />
-                    <VoiceVisualizer isActive={isListening || isTyping || isThinking} />
-                    <HoloScanner isActive={isScanning} />
-                </>
-            )}
-
-            {/* Boot Screen */}
-            {isBooting && (
-                <div className="absolute inset-0 z-50 bg-black flex items-center justify-center">
-                    <div className="text-center">
-                        <div className="text-cyan-400 font-mono text-2xl tracking-[0.5em] mb-4 animate-pulse">INITIALIZING</div>
-                        <div className="w-64 h-1 bg-gray-800 rounded-full overflow-hidden">
-                            <motion.div
-                                className="h-full bg-cyan-400"
-                                initial={{ width: 0 }}
-                                animate={{ width: "100%" }}
-                                transition={{ duration: 2.5, ease: "easeInOut" }}
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Back Button */}
-            <button
-                className="nexus-back-btn"
-                onClick={() => { playClick(); navigate('/'); }}
-                onMouseEnter={playHover}
-                title="Back to Hub"
-            >
-                <ArrowLeft size={20} />
-            </button>
-
-            {/* History Sidebar */}
-            <div className={`nexus-history-sidebar ${historyOpen ? 'open' : ''}`}>
-                <div className="history-header">
-                    <div className="flex items-center gap-2">
-                        <History size={20} />
-                        <h3>Conversation History</h3>
-                    </div>
-                    <button onClick={() => setHistoryOpen(false)} className="close-btn">×</button>
-                </div>
-                <div className="history-content">
-                    {messages.length === 0 ? (
-                        <p className="text-gray-500 text-center py-8">No conversation history yet</p>
-                    ) : (
-                        <>
-                            <div className="history-actions">
-                                <button onClick={exportConversation} className="history-action-btn">
-                                    <Download size={16} /> Export
-                                </button>
-                                <button onClick={clearHistory} className="history-action-btn">
-                                    Clear All
-                                </button>
-                            </div>
-                            <div className="history-messages">
-                                {messages.map(msg => (
-                                    <div key={msg.id} className={`history-message ${msg.role}`}>
-                                        <div className="history-message-header">
-                                            <span className="history-message-role">
-                                                {msg.role === 'user' ? 'You' : 'Nexus'}
-                                            </span>
-                                            <span className="history-message-time">
-                                                {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                        </div>
-                                        <p className="history-message-content">{msg.content}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            {/* Command Palette */}
-            <Command.Dialog open={commandOpen} onOpenChange={setCommandOpen} className="nexus-command-palette">
-                <Command.Input placeholder="Type a command or search..." className="nexus-command-input" />
-                <Command.List className="nexus-command-list">
-                    <Command.Empty>No results found.</Command.Empty>
-                    <Command.Group heading="Navigation">
-                        <Command.Item onSelect={() => executeCommand('dashboard')}>
-                            <LayoutGrid size={16} /> Home
-                        </Command.Item>
-                        <Command.Item onSelect={() => executeCommand('chat')}>
-                            <MessageSquare size={16} /> AI Chat
-                        </Command.Item>
-                        <Command.Item onSelect={() => executeCommand('studio')}>
-                            <Sparkles size={16} /> Gemini Studio
-                        </Command.Item>
-                        <Command.Item onSelect={() => executeCommand('agents')}>
-                            <Users size={16} /> AI Agents
-                        </Command.Item>
-                    </Command.Group>
-                    <Command.Group heading="Actions">
-                        <Command.Item onSelect={() => executeCommand('voice')}>
-                            <Mic size={16} /> Start Voice Command
-                        </Command.Item>
-                        <Command.Item onSelect={() => executeCommand('history')}>
-                            <History size={16} /> View History (⌘H)
-                        </Command.Item>
-                        <Command.Item onSelect={() => executeCommand('export')}>
-                            <Download size={16} /> Export Conversation
-                        </Command.Item>
-                        <Command.Item onSelect={() => executeCommand('What are my priorities today?')}>
-                            <Sparkles size={16} /> Get AI Summary
-                        </Command.Item>
-                    </Command.Group>
-                </Command.List>
-            </Command.Dialog>
-
-            {/* Sidebar Navigation */}
+            {/* Sidebar Dock */}
             <div className="nexus-sidebar">
-                <div className="nexus-logo">
-                    <Cpu size={32} />
+                <div className="p-4 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-blue-500/20">
+                        N
+                    </div>
                 </div>
 
                 <nav className="nexus-nav">
-                    <NavItem
-                        icon={<LayoutGrid size={24} />}
-                        active={activeTab === 'dashboard'}
-                        onClick={() => setActiveTab('dashboard')}
-                    />
-                    <NavItem
-                        icon={<MessageSquare size={24} />}
-                        active={activeTab === 'chat'}
-                        onClick={() => setActiveTab('chat')}
-                    />
-                    <NavItem
-                        icon={<Sparkles size={24} />}
-                        active={activeTab === 'studio'}
-                        onClick={() => setActiveTab('studio')}
-                    />
-                    <NavItem
-                        icon={<Users size={24} />}
-                        active={activeTab === 'agents'}
-                        onClick={() => setActiveTab('agents')}
-                    />
-                    <div style={{ marginTop: 'auto' }}>
-                        <NavItem
-                            icon={<History size={24} />}
-                            active={historyOpen}
-                            onClick={() => setHistoryOpen(!historyOpen)}
-                        />
-                        <button
-                            onClick={() => {
-                                playClick();
-                                setSettingsOpen(true);
-                            }}
-                            onMouseEnter={() => playHover()}
-                            className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-cyan-400 transition-all group relative"
-                        >
-                            <Settings className="w-6 h-6" />
-                            <span className="absolute left-14 bg-black/80 text-cyan-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-cyan-500/30">
-                                Settings
-                            </span>
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                playClick();
-                                setIsMuted(!isMuted);
-                            }}
-                            onMouseEnter={() => playHover()}
-                            className="p-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-cyan-400 transition-all group relative"
-                        >
-                            {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
-                            <span className="absolute left-14 bg-black/80 text-cyan-400 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap border border-cyan-500/30">
-                                {isMuted ? 'Unmute' : 'Mute Voice'}
-                            </span>
-                        </button>
+                    <div
+                        className={`nexus-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+                        onClick={() => { playClick(); setActiveTab('dashboard'); }}
+                        title="Dashboard"
+                    >
+                        <LayoutGrid size={24} />
+                    </div>
+                    <div
+                        className={`nexus-nav-item ${activeTab === 'chat' ? 'active' : ''}`}
+                        onClick={() => { playClick(); setActiveTab('chat'); }}
+                        title="Nexus AI Chat"
+                    >
+                        <MessageSquare size={24} />
+                    </div>
+                    <div
+                        className={`nexus-nav-item ${activeTab === 'studio' ? 'active' : ''}`}
+                        onClick={() => { playClick(); setActiveTab('studio'); }}
+                        title="Creative Studio"
+                    >
+                        <Palette size={24} />
+                    </div>
+                    <div
+                        className={`nexus-nav-item ${activeTab === 'agents' ? 'active' : ''}`}
+                        onClick={() => { playClick(); setActiveTab('agents'); }}
+                        title="Agent Swarm"
+                    >
+                        <Users size={24} />
                     </div>
                 </nav>
+
+                <div className="mt-auto mb-6 flex flex-col gap-4">
+                    <div
+                        className="nexus-nav-item"
+                        onClick={() => { playClick(); setIsSettingsOpen(true); }}
+                        title="Settings"
+                    >
+                        <Settings size={24} />
+                    </div>
+                </div>
             </div>
 
             {/* Main Content */}
-            <main className="nexus-main">
-                {/* Header / Command Bar */}
+            <div className="nexus-main">
+                {/* Header */}
                 <header className="nexus-header">
-                    <div className="nexus-status">
-                        <div className="status-dot"></div>
-                        <span className="glitch-text" data-text="NEXUS ONLINE">NEXUS ONLINE</span>
-                    </div>
-
-                    <div className="nexus-search" onClick={() => setCommandOpen(true)}>
-                        <input type="text" placeholder="Ask Nexus anything... (⌘K)" readOnly />
-                        <Search className="search-icon" size={20} />
+                    <div className="nexus-brand">
+                        <span>Nexus 365</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">PRO</span>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button
-                            className="icon-btn"
-                            onClick={() => setHistoryOpen(!historyOpen)}
-                            title="History (⌘H)"
-                        >
-                            <History size={24} />
-                        </button>
-                        <div className="relative cursor-pointer hover:text-cyan-400 transition-colors">
-                            <Bell size={24} />
-                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                        <div className="nexus-status">
+                            <div className="status-dot" />
+                            <span>Pollinations AI Active</span>
                         </div>
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 border-2 border-white/20"></div>
+
+                        <button
+                            className={`w-10 h-10 rounded-full border flex items-center justify-center transition-colors ${isHistoryOpen ? 'bg-white/10 border-white/20 text-white' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                            onClick={() => { playClick(); setIsHistoryOpen(!isHistoryOpen); }}
+                            title="History"
+                        >
+                            <History size={20} />
+                        </button>
                     </div>
                 </header>
 
                 {/* Dashboard Grid */}
                 <div className="nexus-dashboard">
-                    {/* Left Column: Intelligence Feed or Chat */}
-                    <div className="flex flex-col gap-6">
-                        {activeTab === 'studio' ? (
+                    {/* Primary Panel (Dynamic Content) */}
+                    <AnimatePresence mode="wait">
+                        {activeTab === 'dashboard' ? (
                             <motion.div
-                                className="nexus-panel flex-1 h-full"
-                                initial={{ opacity: 0, y: 20 }}
+                                key="dashboard"
+                                className="nexus-panel"
+                                initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                            >
-                                <GeminiStudio />
-                            </motion.div>
-                        ) : activeTab === 'agents' ? (
-                            <motion.div
-                                className="nexus-panel flex-1 h-full"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                            >
-                                <MultiAgentPanel />
-                            </motion.div>
-                        ) : activeTab === 'dashboard' && messages.length === 0 ? (
-                            <>
-                                {/* System Status & Quick Actions */}
-                                <motion.div
-                                    className="nexus-panel flex-1 flex flex-col gap-4"
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.1 }}
-                                >
-                                    <AgentStatusWidget />
-                                    <QuickActionsWidget onNavigate={setActiveTab} />
-                                </motion.div>
-
-                                {/* Active Processes */}
-                                <motion.div
-                                    className="nexus-panel h-1/3 flex flex-col"
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.3 }}
-                                >
-                                    <ActiveTasksWidget />
-                                </motion.div>
-                            </>
-                        ) : (activeTab === 'chat' || activeTab === 'dashboard') ? (
-                            /* AI Chat Panel */
-                            <motion.div
-                                className="nexus-panel flex-1 flex flex-col"
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
                             >
                                 <div className="panel-header">
                                     <div className="panel-title">
-                                        <MessageSquare size={20} />
-                                        <span>Nexus AI Assistant</span>
+                                        <Activity size={16} />
+                                        <span>System Overview</span>
                                     </div>
-                                    <button
-                                        onClick={() => setShowDemos(!showDemos)}
-                                        className={`icon-btn ${showDemos ? 'text-cyan-400 bg-cyan-500/10' : ''}`}
-                                        title="Demo Scenarios"
-                                    >
-                                        <Sparkles size={16} />
-                                    </button>
-                                    <button onClick={exportConversation} className="icon-btn" title="Export">
-                                        <Download size={16} />
-                                    </button>
+                                </div>
+                                <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-6">
+                                    <div className="text-center">
+                                        <h3 className="text-2xl font-medium text-white mb-2">Welcome to Nexus 365</h3>
+                                        <p className="text-gray-400">Select a module to begin your workflow.</p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 w-full max-w-lg">
+                                        <button
+                                            onClick={() => setActiveTab('chat')}
+                                            className="p-6 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-blue-500/30 transition-all group text-left"
+                                        >
+                                            <MessageSquare className="w-8 h-8 text-blue-400 mb-3 group-hover:scale-110 transition-transform" />
+                                            <div className="text-white font-medium">New Chat</div>
+                                            <div className="text-sm text-gray-500">Start a conversation with Pollinations AI</div>
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTab('agents')}
+                                            className="p-6 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-purple-500/30 transition-all group text-left"
+                                        >
+                                            <Users className="w-8 h-8 text-purple-400 mb-3 group-hover:scale-110 transition-transform" />
+                                            <div className="text-white font-medium">Agent Swarm</div>
+                                            <div className="text-sm text-gray-500">Deploy autonomous AI agents</div>
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ) : activeTab === 'chat' ? (
+                            <motion.div
+                                key="chat"
+                                className="nexus-panel"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <div className="panel-header">
+                                    <div className="panel-title">
+                                        <MessageSquare size={16} />
+                                        <span>Nexus AI</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={exportConversation}
+                                            className="p-1.5 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                                            title="Export Chat"
+                                        >
+                                            <Download size={16} />
+                                        </button>
+                                    </div>
                                 </div>
 
-                                {showDemos && (
-                                    <div className="mb-4 p-2 bg-black/40 rounded-lg border border-cyan-500/20">
-                                        <DemoScenarios onSelectDemo={(prompt, options) => handleSendMessage(prompt, options)} />
-                                    </div>
-                                )}
-
-                                <div className="flex-1 overflow-y-auto flex flex-col gap-3 mb-4">
-                                    {messages.map(msg => (
-                                        <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-[85%] p-3 rounded-lg ${msg.role === 'user' ? 'bg-cyan-500/20 border border-cyan-500/30' : 'bg-white/5 border border-white/10'}`}>
-                                                {/* Images */}
-                                                {msg.images && msg.images.length > 0 && (
-                                                    <div className="flex flex-wrap gap-2 mb-2">
-                                                        {msg.images.map(img => (
-                                                            <img
-                                                                key={img.id}
-                                                                src={img.preview}
-                                                                alt="Uploaded"
-                                                                className="w-24 h-24 object-cover rounded border border-white/20"
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                )}
-
-                                                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-
-                                                {/* Code Execution Result */}
-                                                {msg.executableCode && (
-                                                    <CodeExecutionPanel
-                                                        code={msg.executableCode}
-                                                        result={msg.codeExecutionResult}
-                                                    />
-                                                )}
-
-                                                {/* Function Call Info */}
-                                                {msg.functionCall && (
-                                                    <div className="mt-2 text-xs font-mono text-gray-400 bg-black/30 p-2 rounded border border-white/10">
-                                                        <div className="flex items-center gap-1 text-cyan-400 mb-1">
-                                                            <Zap size={10} />
-                                                            <span>Function Called: {msg.functionCall.name}</span>
-                                                        </div>
-                                                        <div>Args: {JSON.stringify(msg.functionCall.args)}</div>
-                                                        {msg.functionResult && (
-                                                            <div className="mt-1 text-green-400">
-                                                                Result: {JSON.stringify(msg.functionResult)}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                <span className="text-xs text-gray-500 mt-1 block">
-                                                    {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
+                                <div className="chat-container">
+                                    {messages.length === 0 && (
+                                        <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
+                                            Start a conversation...
+                                        </div>
+                                    )}
+                                    {messages.map((msg, idx) => (
+                                        <div key={idx} className={`chat-message ${msg.role}`}>
+                                            <div className="whitespace-pre-wrap">{msg.content}</div>
                                         </div>
                                     ))}
-                                    {isTyping && (
-                                        <div className="flex justify-start">
-                                            <div className="bg-white/5 border border-white/10 p-3 rounded-lg">
-                                                <div className="typing-indicator">
-                                                    <span></span><span></span><span></span>
-                                                </div>
-                                            </div>
+                                    {isThinking && (
+                                        <div className="chat-message ai flex items-center gap-2">
+                                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" />
+                                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-75" />
+                                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce delay-150" />
                                         </div>
                                     )}
                                     <div ref={messagesEndRef} />
                                 </div>
 
-                                <div className="flex flex-col gap-2">
-                                    <ImageUpload onImagesChange={setUploadedImages} maxImages={4} />
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            value={inputValue}
-                                            onChange={(e) => { playType(); setInputValue(e.target.value); }}
-                                            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                                            placeholder={uploadedImages.length > 0 ? "Describe these images..." : "Ask Nexus anything..."}
-                                            className="flex-1 bg-black/50 border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-cyan-500"
-                                        />
+                                <div className="chat-input-wrapper">
+                                    <input
+                                        type="text"
+                                        className="chat-input"
+                                        placeholder="Ask Nexus anything..."
+                                        value={inputValue}
+                                        onChange={(e) => { playType(); setInputValue(e.target.value); }}
+                                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                                        autoFocus
+                                    />
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
                                         <button
-                                            onClick={() => handleSendMessage()}
-                                            className="px-4 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 rounded-lg text-cyan-300 transition-all"
+                                            className={`p-2 rounded-lg transition-colors ${isListening ? 'bg-red-500/20 text-red-400 animate-pulse' : 'hover:bg-white/5 text-gray-400'}`}
+                                            onClick={toggleVoice}
+                                            title={isListening ? "Stop Voice" : "Start Voice"}
                                         >
-                                            <Send size={16} />
+                                            {isListening ? <MicOff size={18} /> : <Mic size={18} />}
+                                        </button>
+                                        <button
+                                            className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+                                            onClick={() => handleSendMessage()}
+                                        >
+                                            <Send size={18} />
                                         </button>
                                     </div>
                                 </div>
                             </motion.div>
+                        ) : activeTab === 'agents' ? (
+                            <motion.div
+                                key="agents"
+                                className="nexus-panel"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <MultiAgentPanel />
+                            </motion.div>
+                        ) : activeTab === 'studio' ? (
+                            <motion.div
+                                key="studio"
+                                className="nexus-panel"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <div className="panel-header">
+                                    <div className="panel-title">
+                                        <Palette size={16} />
+                                        <span>Creative Studio</span>
+                                    </div>
+                                </div>
+                                <DemoScenarios onSelectDemo={(prompt) => handleSendMessage(prompt)} />
+                            </motion.div>
                         ) : null}
-                    </div>
+                    </AnimatePresence>
 
-                    {/* Right Column: Schedule & Assistant */}
-                    <div className="flex flex-col gap-6">
-                        {/* AI Assistant Panel */}
-                        <motion.div
-                            className="nexus-panel"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.2 }}
-                        >
-                            <div className="panel-header">
-                                <div className="panel-title">
-                                    <Sparkles size={20} />
-                                    <span>AI Assistant</span>
-                                </div>
-                            </div>
-
-                            <div className="bg-gradient-to-br from-cyan-900/20 to-purple-900/20 p-4 rounded-xl border border-white/10 mb-4">
-                                <p className="text-sm text-white/70 mb-4">
-                                    Your AI-powered assistant is ready to help with tasks, research, coding, and more.
-                                </p>
-                                <button
-                                    onClick={() => setActiveTab('dashboard')}
-                                    className="w-full py-2 bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/50 rounded text-cyan-300 text-sm transition-all"
-                                >
-                                    Start Conversation
-                                </button>
-                            </div>
-                        </motion.div>
-
-                        {/* Voice Command Panel */}
-                        <motion.div
-                            className="nexus-panel flex-1 flex items-center justify-center relative overflow-hidden"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.4 }}
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-t from-cyan-500/5 to-transparent"></div>
-
-                            <div className="text-center z-10">
-                                <motion.div
-                                    className="w-24 h-24 rounded-full border-2 border-cyan-500/30 flex items-center justify-center mx-auto mb-4 cursor-pointer relative"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={toggleVoice}
-                                >
-                                    {isListening && (
-                                        <div className="absolute inset-0 rounded-full bg-cyan-500/20 animate-ping"></div>
-                                    )}
-                                    <Mic size={32} className={isListening ? 'text-cyan-400' : 'text-gray-500'} />
-                                </motion.div>
-                                <h3 className="text-lg font-light tracking-widest text-gray-400">
-                                    {isListening ? 'LISTENING...' : 'VOICE COMMAND'}
-                                </h3>
-                                <p className="text-xs text-gray-600 mt-2">Click to activate</p>
-                            </div>
-                        </motion.div>
+                    {/* Secondary Panel (Media Hub) */}
+                    <div className="nexus-panel">
+                        <MediaPanel mediaItems={mediaItems} setMediaItems={setMediaItems} />
                     </div>
                 </div>
-            </main>
+            </div>
 
-            {/* Floating Action Button */}
-            <motion.button
-                className="nexus-fab"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => { playClick(); setCommandOpen(true); }}
-                onMouseEnter={playHover}
-            >
-                <MessageSquare size={24} />
-            </motion.button>
-            {/* Settings Modal */}
-            {settingsOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="bg-gray-900 border border-cyan-500/30 rounded-lg p-6 w-full max-w-md shadow-[0_0_30px_rgba(0,240,255,0.2)]"
+            {/* History Sidebar Overlay */}
+            <div className={`nexus-history-sidebar ${isHistoryOpen ? 'open' : ''}`}>
+                <div className="history-header">
+                    <h3 className="text-lg font-semibold text-white">History</h3>
+                    <button
+                        className="text-gray-400 hover:text-white"
+                        onClick={() => setIsHistoryOpen(false)}
                     >
-                        <h2 className="text-xl font-mono text-cyan-400 mb-4 flex items-center gap-2">
-                            <Settings size={20} />
-                            SYSTEM CONFIGURATION
-                        </h2>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-mono text-gray-400 mb-1">GOOGLE GEMINI API KEY</label>
-                                <div className="w-full bg-black/50 border border-green-500/30 rounded px-3 py-2 text-green-400 font-mono flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                    SYSTEM CONFIGURED
-                                </div>
-                                <p className="text-[10px] text-gray-500 mt-1">
-                                    Neural link established via secure environment.
-                                </p>
-                            </div>
-
-                            <div className="flex justify-end gap-3 mt-6">
-                                <button
-                                    onClick={() => setSettingsOpen(false)}
-                                    className="px-4 py-2 text-xs font-mono text-gray-400 hover:text-white transition-colors"
-                                >
-                                    CLOSE
-                                </button>
-                            </div>
-                        </div>
-                    </motion.div>
+                        <X size={20} />
+                    </button>
                 </div>
-            )}
-        </div>
-    );
-};
+                <div className="history-content">
+                    {messages.length === 0 ? (
+                        <div className="text-center text-gray-500 mt-8">
+                            No recent history
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {messages.filter(m => m.role === 'user').map((msg, i) => (
+                                <div key={i} className="p-3 rounded bg-white/5 border border-white/10 text-sm text-gray-300 cursor-pointer hover:bg-white/10 transition-colors">
+                                    <div className="line-clamp-2">{msg.content}</div>
+                                    <div className="text-xs text-gray-500 mt-1">{msg.timestamp.toLocaleTimeString()}</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
 
-const NavItem = ({ icon, active, onClick }: { icon: React.ReactNode, active: boolean, onClick: () => void }) => {
-    const { playHover, playClick } = useNexusSound();
-    return (
-        <div
-            className={`nexus-nav-item ${active ? 'active' : ''}`}
-            onClick={() => { playClick(); onClick(); }}
-            onMouseEnter={playHover}
-        >
-            {icon}
             {/* Settings Modal */}
-
+            <ApiSettings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
         </div>
     );
 };

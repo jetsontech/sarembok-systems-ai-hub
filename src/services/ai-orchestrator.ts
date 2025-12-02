@@ -5,7 +5,7 @@
 
 export interface AIModel {
     name: string;
-    endpoint: 'pollinations' | 'gemini' | 'huggingface' | 'local';
+    endpoint: 'pollinations' | 'gemini' | 'huggingface' | 'local' | 'deepseek';
     dailyLimit: number;
     quality: 'premium' | 'high' | 'good';
     speed: 'fast' | 'medium' | 'slow';
@@ -33,8 +33,9 @@ class AIOrchestrator {
      */
     private models = {
         script: [
-            { name: 'Gemini Flash', endpoint: 'gemini' as const, dailyLimit: 1500, quality: 'premium' as const, speed: 'fast' as const },
-            { name: 'Pollinations Text', endpoint: 'pollinations' as const, dailyLimit: Infinity, quality: 'high' as const, speed: 'fast' as const },
+            { name: 'Pollinations AI', endpoint: 'pollinations' as const, dailyLimit: Infinity, quality: 'high' as const, speed: 'fast' as const },
+            { name: 'Gemini 2.0 Flash', endpoint: 'gemini' as const, dailyLimit: Infinity, quality: 'premium' as const, speed: 'fast' as const },
+            { name: 'DeepSeek Chat', endpoint: 'deepseek' as const, dailyLimit: Infinity, quality: 'premium' as const, speed: 'fast' as const },
         ],
         image: [
             { name: 'Pollinations FLUX', endpoint: 'pollinations' as const, dailyLimit: Infinity, quality: 'premium' as const, speed: 'fast' as const },
@@ -86,10 +87,6 @@ class AIOrchestrator {
     }
 
     /**
-     * Generate script using best available free model
-     */
-
-    /**
      * Generic Chat/Completion for Nexus 365
      */
     async chat(message: string, systemPrompt?: string): Promise<GenerationResult> {
@@ -104,7 +101,9 @@ class AIOrchestrator {
         try {
             let data;
             if (model.endpoint === 'gemini') {
-                data = await this.callGemini(fullPrompt);
+                data = await this.callGeminiProxy(message, systemPrompt);
+            } else if (model.endpoint === 'deepseek') {
+                data = await this.callDeepSeek(message, systemPrompt);
             } else if (model.endpoint === 'pollinations') {
                 data = await this.callPollinationsText(fullPrompt);
             }
@@ -114,8 +113,8 @@ class AIOrchestrator {
         } catch (error) {
             console.error(`Chat failed with ${model.name}:`, error);
 
-            // Try fallback to Pollinations if Gemini failed
-            if (model.endpoint === 'gemini') {
+            // Try fallback to Pollinations if primary failed
+            if (model.endpoint !== 'pollinations') {
                 console.log('Attempting fallback to Pollinations...');
                 const fallbackModel = this.models.script.find(m => m.endpoint === 'pollinations');
                 if (fallbackModel) {
@@ -155,7 +154,9 @@ class AIOrchestrator {
             let data;
 
             if (model.endpoint === 'gemini') {
-                data = await this.callGemini(prompt);
+                data = await this.callGeminiProxy(prompt, "You are a world-class creative director.");
+            } else if (model.endpoint === 'deepseek') {
+                data = await this.callDeepSeek(prompt, "You are a world-class creative director.");
             } else if (model.endpoint === 'pollinations') {
                 data = await this.callPollinationsText(prompt);
             }
@@ -169,9 +170,14 @@ class AIOrchestrator {
             const nextModel = this.models.script.find(m => m.name !== model.name);
             if (nextModel) {
                 try {
-                    const data = nextModel.endpoint === 'pollinations'
-                        ? await this.callPollinationsText(prompt)
-                        : await this.callGemini(prompt);
+                    let data;
+                    if (nextModel.endpoint === 'gemini') {
+                        data = await this.callGeminiProxy(prompt, "You are a world-class creative director.");
+                    } else if (nextModel.endpoint === 'deepseek') {
+                        data = await this.callDeepSeek(prompt, "You are a world-class creative director.");
+                    } else {
+                        data = await this.callPollinationsText(prompt);
+                    }
 
                     this.trackUsage(nextModel.name);
                     return { success: true, data, model: nextModel.name };
@@ -276,38 +282,55 @@ Make it Super Bowl quality. Make it memorable. Make it HUMAN.`;
     }
 
     /**
-     * Call Gemini Flash (free tier)
+     * Call Gemini Proxy API
      */
-    private async callGemini(prompt: string): Promise<any> {
-        const GEMINI_API_KEY = 'AIzaSyAReqwVtDJlMep8_pxLGNpHlGk44onHEoI';
+    private async callGeminiProxy(message: string, systemPrompt?: string): Promise<string> {
+        const fullPrompt = systemPrompt ? `${systemPrompt}\n\nUser: ${message}` : message;
 
-        if (!GEMINI_API_KEY) {
-            throw new Error('Gemini API key not configured.');
-        }
-
-        const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: {
-                        temperature: 0.9,
-                        topK: 40,
-                        topP: 0.95,
-                        maxOutputTokens: 2048,
-                    },
-                }),
-            }
-        );
+        const response = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: fullPrompt,
+                model: 'gemini-2.0-flash-exp',
+            }),
+        });
 
         if (!response.ok) {
             throw new Error(`Gemini API error: ${response.statusText}`);
         }
 
         const data = await response.json();
-        return data.candidates[0].content.parts[0].text;
+        return data.response;
+    }
+
+    /**
+     * Call DeepSeek API
+     */
+    private async callDeepSeek(message: string, systemPrompt?: string): Promise<any> {
+        const messages = [];
+        if (systemPrompt) {
+            messages.push({ role: 'system', content: systemPrompt });
+        }
+        messages.push({ role: 'user', content: message });
+
+        const response = await fetch('/api/deepseek', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages,
+                model: 'deepseek-chat',
+                temperature: 0.7,
+                max_tokens: 4096
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`DeepSeek API error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message.content;
     }
 
     /**
@@ -331,7 +354,20 @@ Make it Super Bowl quality. Make it memorable. Make it HUMAN.`;
         }
 
         const text = await response.text();
-        return text;
+
+        // Try to parse as JSON first (new Pollinations format)
+        try {
+            const json = JSON.parse(text);
+            // Extract message content from OpenAI-compatible format
+            if (json.choices && json.choices[0]?.message?.content) {
+                return json.choices[0].message.content;
+            }
+            // Fallback to raw text if not in expected format
+            return text;
+        } catch {
+            // If not JSON, return as-is (old format)
+            return text;
+        }
     }
 
     /**

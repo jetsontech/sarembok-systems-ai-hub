@@ -58,7 +58,7 @@ const GeminiStudio: React.FC = () => {
                     <div>
                         <label className="block text-xs font-mono text-gray-400 mb-2">MODEL</label>
                         <div className="p-3 bg-black/40 rounded border border-white/10 flex items-center justify-between">
-                            <span className="text-sm text-white">Gemini 1.5 Pro</span>
+                            <span className="text-sm text-white">Gemini 2.0 Flash</span>
                             <span className="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded">Active</span>
                         </div>
                     </div>
