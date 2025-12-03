@@ -75,6 +75,8 @@ const Nexus365: React.FC = () => {
         }
     }, []);
 
+
+
     // Auto-scroll to bottom of chat
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

@@ -99,6 +99,7 @@ class AIOrchestrator {
         const fullPrompt = systemPrompt ? `${systemPrompt}\n\nUser: ${message}` : message;
 
         try {
+            console.log(`Attempting chat with ${model.name}...`);
             let data;
             if (model.endpoint === 'gemini') {
                 data = await this.callGeminiProxy(message, systemPrompt);
@@ -109,21 +110,39 @@ class AIOrchestrator {
             }
 
             this.trackUsage(model.name);
+            console.log(`Chat successful with ${model.name}`);
             return { success: true, data, model: model.name };
         } catch (error) {
             console.error(`Chat failed with ${model.name}:`, error);
 
-            // Try fallback to Pollinations if primary failed
-            if (model.endpoint !== 'pollinations') {
-                console.log('Attempting fallback to Pollinations...');
-                const fallbackModel = this.models.script.find(m => m.endpoint === 'pollinations');
+            // Try fallback to Gemini if Pollinations failed
+            if (model.endpoint === 'pollinations') {
+                console.log('Pollinations failed, attempting fallback to Gemini...');
+                const fallbackModel = this.models.script.find(m => m.endpoint === 'gemini');
                 if (fallbackModel) {
                     try {
-                        const data = await this.callPollinationsText(fullPrompt);
+                        const data = await this.callGeminiProxy(message, systemPrompt);
                         this.trackUsage(fallbackModel.name);
+                        console.log(`Fallback successful with ${fallbackModel.name}`);
                         return { success: true, data, model: fallbackModel.name };
                     } catch (fallbackError) {
-                        console.error('Fallback failed:', fallbackError);
+                        console.error('Gemini fallback failed:', fallbackError);
+                    }
+                }
+            }
+
+            // Try DeepSeek as last resort
+            if (model.endpoint !== 'deepseek') {
+                console.log('Attempting final fallback to DeepSeek...');
+                const deepseekModel = this.models.script.find(m => m.endpoint === 'deepseek');
+                if (deepseekModel) {
+                    try {
+                        const data = await this.callDeepSeek(message, systemPrompt);
+                        this.trackUsage(deepseekModel.name);
+                        console.log(`Fallback successful with ${deepseekModel.name}`);
+                        return { success: true, data, model: deepseekModel.name };
+                    } catch (fallbackError) {
+                        console.error('DeepSeek fallback failed:', fallbackError);
                     }
                 }
             }
@@ -338,22 +357,18 @@ Make it Super Bowl quality. Make it memorable. Make it HUMAN.`;
      */
     private async callPollinationsText(prompt: string): Promise<any> {
         try {
-            // Try the streaming endpoint first (more reliable)
-            const response = await fetch('https://text.pollinations.ai/', {
-                method: 'POST',
+            // Pollinations uses a simple GET endpoint with the prompt in the URL
+            const systemPrompt = 'You are Nexus, an advanced AI assistant. Be helpful, concise, and intelligent.';
+            const fullPrompt = `${systemPrompt}\n\nUser: ${prompt}\n\nAssistant:`;
+
+            const encodedPrompt = encodeURIComponent(fullPrompt);
+            const url = `https://text.pollinations.ai/${encodedPrompt}`;
+
+            const response = await fetch(url, {
+                method: 'GET',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    messages: [
-                        { role: 'system', content: 'You are Nexus, an advanced AI assistant. Be helpful, concise, and intelligent.' },
-                        { role: 'user', content: prompt }
-                    ],
-                    model: 'openai',
-                    seed: 42,
-                    jsonMode: false
-                }),
+                    'Accept': 'text/plain'
+                }
             });
 
             if (!response.ok) {
@@ -361,23 +376,7 @@ Make it Super Bowl quality. Make it memorable. Make it HUMAN.`;
             }
 
             const text = await response.text();
-
-            // Try to parse as JSON first (new Pollinations format)
-            try {
-                const json = JSON.parse(text);
-                // Extract message content from OpenAI-compatible format
-                if (json.choices && json.choices[0]?.message?.content) {
-                    return json.choices[0].message.content;
-                }
-                if (json.response) {
-                    return json.response;
-                }
-                // Fallback to raw text if not in expected format
-                return text;
-            } catch {
-                // If not JSON, return as-is (streaming format)
-                return text.trim();
-            }
+            return text.trim();
         } catch (error) {
             console.error('Pollinations API failed:', error);
             throw error;
