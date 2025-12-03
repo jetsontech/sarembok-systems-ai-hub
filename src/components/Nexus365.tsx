@@ -465,7 +465,7 @@ Acknowledge the request briefly, then output the appropriate tag. Do NOT provide
                             <span className="hidden sm:inline text-sm">Hub</span>
                         </button>
                         <span>Nexus 365</span>
-                        <span className="text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">PRO</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">PRO v2.0</span>
                     </div>
 
                     <div className="flex items-center gap-4">
