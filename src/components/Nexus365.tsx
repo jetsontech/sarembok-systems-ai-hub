@@ -12,7 +12,8 @@ import {
     Download,
     Users,
     Activity,
-    X
+    X,
+    Home
 } from 'lucide-react';
 import { useNexusSound } from '../hooks/useNexusSound';
 import { useNexusBrain } from '../hooks/useNexusBrain';
@@ -448,6 +449,14 @@ Acknowledge the request briefly, then output the appropriate tag. Do NOT provide
                 {/* Header */}
                 <header className="nexus-header">
                     <div className="nexus-brand">
+                        <button
+                            onClick={() => window.location.href = '/'}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-blue-500/30 transition-all mr-4"
+                            title="Back to Hub"
+                        >
+                            <Home size={16} />
+                            <span className="hidden sm:inline text-sm">Hub</span>
+                        </button>
                         <span>Nexus 365</span>
                         <span className="text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">PRO</span>
                     </div>
