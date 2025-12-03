@@ -35,40 +35,41 @@
 
     /* 3. SIDEBAR -> BOTTOM NAVIGATION */
     .nexus-sidebar {
-        position: fixed;
+        position: fixed !important;
         /* Stick to bottom */
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 65px;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 65px !important;
         /* Fixed height */
         background: rgba(15, 15, 20, 0.95);
         -webkit-backdrop-filter: blur(12px);
         backdrop-filter: blur(12px);
         border-top: 1px solid rgba(255, 255, 255, 0.1);
-        display: flex;
-        flex-direction: row;
-        justify-content: space-evenly;
-        align-items: center;
-        padding: 0;
-        z-index: 9999;
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-evenly !important;
+        align-items: center !important;
+        padding: 0 !important;
+        z-index: 9999 !important;
         /* Always on top */
         box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5);
+        border-right: none !important;
     }
 
     .nexus-logo,
     .nexus-nav-item::after {
-        display: none;
+        display: none !important;
     }
 
     .nexus-nav {
-        display: flex;
-        flex-direction: row;
-        width: 100%;
-        justify-content: space-evenly;
-        align-items: center;
-        margin: 0;
-        gap: 0;
+        display: flex !important;
+        flex-direction: row !important;
+        width: 100% !important;
+        justify-content: space-evenly !important;
+        align-items: center !important;
+        margin: 0 !important;
+        gap: 0 !important;
     }
 
     .nexus-nav-item {
@@ -231,6 +232,8 @@
         /* Remove mobile shadow */
         background: var(--color-surface);
         /* Ensure background is set */
+        display: flex;
+        /* Ensure display is reset */
     }
 
     .nexus-nav {
@@ -240,6 +243,8 @@
         margin-bottom: auto;
         width: auto;
         /* Reset mobile width */
+        display: flex;
+        /* Ensure display is reset */
     }
 
     .nexus-nav-item {
