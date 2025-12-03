@@ -634,7 +634,7 @@ Acknowledge the request briefly, then output the appropriate tag. Do NOT provide
                                 <div className="panel-header">
                                     <div className="panel-title">
                                         <Palette size={16} />
-                                        <span>Creative Studio</span>
+                                        <span>Content Creator Studio</span>
                                     </div>
                                 </div>
                                 <DemoScenarios onSelectDemo={(prompt) => handleSendMessage(prompt)} />
