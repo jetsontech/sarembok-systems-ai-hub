@@ -43,8 +43,8 @@
         height: 65px;
         /* Fixed height */
         background: rgba(15, 15, 20, 0.95);
-        backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(12px);
         border-top: 1px solid rgba(255, 255, 255, 0.1);
         display: flex;
         flex-direction: row;
@@ -205,7 +205,19 @@
         display: none !important;
     }
 
+    /* Reset mobile container styles */
+    .nexus-container {
+        position: fixed;
+        z-index: auto;
+        /* Reset the high z-index from mobile */
+    }
+
+    /* Reset sidebar to normal desktop layout */
     .nexus-sidebar {
+        position: relative;
+        /* Reset from fixed */
+        bottom: auto;
+        left: auto;
         width: 80px;
         height: 100vh;
         flex-direction: column;
@@ -213,6 +225,12 @@
         padding: 2rem 0;
         border-right: 1px solid var(--glass-border);
         border-top: none;
+        z-index: 20;
+        /* Normal z-index for desktop */
+        box-shadow: none;
+        /* Remove mobile shadow */
+        background: var(--color-surface);
+        /* Ensure background is set */
     }
 
     .nexus-nav {
@@ -220,10 +238,24 @@
         gap: 1.5rem;
         margin-top: auto;
         margin-bottom: auto;
+        width: auto;
+        /* Reset mobile width */
+    }
+
+    .nexus-nav-item {
+        width: 48px;
+        height: 48px;
+        min-width: auto;
+        /* Reset mobile min-width */
+        min-height: auto;
+        cursor: pointer;
+        /* Ensure cursor shows it's clickable */
     }
 
     .nexus-main {
         padding-bottom: 0;
+        position: relative;
+        /* Ensure proper stacking */
     }
 
     .nexus-dashboard {
