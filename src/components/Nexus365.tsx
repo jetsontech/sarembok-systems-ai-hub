@@ -411,6 +411,13 @@ Acknowledge the request briefly, then output the appropriate tag. Do NOT provide
                         <LayoutGrid size={24} />
                     </div>
                     <div
+                        className="nexus-nav-item mobile-only"
+                        onClick={() => window.location.href = '/'}
+                        title="Back to Hub"
+                    >
+                        <Home size={24} />
+                    </div>
+                    <div
                         className={`nexus-nav-item ${activeTab === 'chat' ? 'active' : ''}`}
                         onClick={() => { playClick(); setActiveTab('chat'); }}
                         title="Nexus AI Chat"
@@ -451,7 +458,7 @@ Acknowledge the request briefly, then output the appropriate tag. Do NOT provide
                     <div className="nexus-brand">
                         <button
                             onClick={() => window.location.href = '/'}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-blue-500/30 transition-all mr-4"
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 hover:border-blue-500/30 transition-all mr-4 desktop-only"
                             title="Back to Hub"
                         >
                             <Home size={16} />
