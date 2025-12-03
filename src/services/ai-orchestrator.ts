@@ -337,36 +337,50 @@ Make it Super Bowl quality. Make it memorable. Make it HUMAN.`;
      * Call Pollinations.ai text generation (unlimited free)
      */
     private async callPollinationsText(prompt: string): Promise<any> {
-        const response = await fetch('https://text.pollinations.ai/openai', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                messages: [
-                    { role: 'system', content: 'You are a world-class creative director.' },
-                    { role: 'user', content: prompt }
-                ],
-                model: 'openai',
-            }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Pollinations API error: ${response.statusText}`);
-        }
-
-        const text = await response.text();
-
-        // Try to parse as JSON first (new Pollinations format)
         try {
-            const json = JSON.parse(text);
-            // Extract message content from OpenAI-compatible format
-            if (json.choices && json.choices[0]?.message?.content) {
-                return json.choices[0].message.content;
+            // Try the streaming endpoint first (more reliable)
+            const response = await fetch('https://text.pollinations.ai/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    messages: [
+                        { role: 'system', content: 'You are Nexus, an advanced AI assistant. Be helpful, concise, and intelligent.' },
+                        { role: 'user', content: prompt }
+                    ],
+                    model: 'openai',
+                    seed: 42,
+                    jsonMode: false
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Pollinations API error: ${response.status} ${response.statusText}`);
             }
-            // Fallback to raw text if not in expected format
-            return text;
-        } catch {
-            // If not JSON, return as-is (old format)
-            return text;
+
+            const text = await response.text();
+
+            // Try to parse as JSON first (new Pollinations format)
+            try {
+                const json = JSON.parse(text);
+                // Extract message content from OpenAI-compatible format
+                if (json.choices && json.choices[0]?.message?.content) {
+                    return json.choices[0].message.content;
+                }
+                if (json.response) {
+                    return json.response;
+                }
+                // Fallback to raw text if not in expected format
+                return text;
+            } catch {
+                // If not JSON, return as-is (streaming format)
+                return text.trim();
+            }
+        } catch (error) {
+            console.error('Pollinations API failed:', error);
+            throw error;
         }
     }
 
